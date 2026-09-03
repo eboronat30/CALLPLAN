@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Territorio · Servier</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
+
+  :root{
+    --bg:#F8F6F1; --panel:#FFFFFF; --border:#E4E0D6;
+    --ink:#23271F; --dim:#7A7E72;
+    --teal:#3F6659; --teal-soft:#E7EEEA;
+    --amber:#C08A3E; --amber-soft:#F5EAD6;
+    --rose:#B8574A; --rose-soft:#F5E6E3;
+    --gray-soft:#EDEBE4;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;-webkit-font-smoothing:antialiased;padding-bottom:40px;}
+  .wrap{max-width:560px;margin:0 auto;padding:22px 16px 0;}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:.02em;margin-bottom:6px;}
+  h1{font-family:'Source Serif 4',serif;font-weight:600;font-size:25px;margin:0 0 4px;letter-spacing:-.01em;}
+  .subtitle{color:var(--dim);font-size:13px;line-height:1.5;max-width:46ch;}
+
+  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--border);padding:3px;border-radius:10px;margin:18px 0;position:sticky;top:10px;z-index:5;}
+  .tab{text-align:center;padding:8px 3px;font-size:11.5px;font-weight:500;border-radius:8px;cursor:pointer;color:var(--dim);background:transparent;}
+  .tab.active{background:var(--panel);color:var(--ink);}
+  .view{display:none;} .view.active{display:block;}
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
+  .card-title{font-family:'Source Serif 4',serif;font-size:15.5px;font-weight:600;margin:0 0 12px;}
+  .card-sub{font-size:12px;color:var(--dim);margin:-8px 0 12px;}
+
+  label{display:block;font-size:11.5px;color:var(--dim);margin:11px 0 5px;}
+  label:first-of-type{margin-top:0;}
+  input[type="text"],input[type="date"],input[type="number"],select,textarea{
+    width:100%;padding:10px 11px;border:1px solid var(--border);border-radius:8px;
+    background:#FCFBF8;color:var(--ink);font-family:'IBM Plex Sans',sans-serif;font-size:14px;
+  }
+  textarea{resize:vertical;min-height:56px;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal);}
+  .row2{display:flex;gap:10px;} .row2>div{flex:1;}
+  .row3{display:flex;gap:8px;} .row3>div{flex:1;}
+
+  .checkrow{display:flex;align-items:center;gap:9px;margin-top:12px;cursor:pointer;}
+  .checkbox{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--dim);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .checkbox svg{opacity:0;width:11px;height:11px;}
+  .checkrow.checked .checkbox{background:var(--teal);border-color:var(--teal);}
+  .checkrow.checked .checkbox svg{opacity:1;}
+  .checkrow span{font-size:13.5px;}
+
+  .btn{width:100%;margin-top:16px;padding:11px;border:none;border-radius:9px;background:var(--teal);color:#fff;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn-sm{width:auto;margin-top:0;padding:8px 14px;font-size:13px;}
+  .btn-ghost{background:none;border:1px solid var(--border);color:var(--dim);}
+  .btn-danger{background:none;border:1px solid var(--rose-soft);color:var(--rose);}
+  .toggle2{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:3px;margin-bottom:14px;}
+  .toggle2 .opt{flex:1;text-align:center;padding:8px;font-size:13px;border-radius:7px;cursor:pointer;color:var(--dim);}
+  .toggle2 .opt.active{background:var(--teal);color:#fff;font-weight:600;}
+
+  .empty-hint{font-size:13px;color:var(--dim);padding:8px 0;}
+  .search{margin-bottom:12px;}
+
+  .center-group{margin-bottom:16px;}
+  .center-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;}
+  .center-name{font-weight:600;font-size:14px;}
+  .center-type{font-size:11px;color:var(--dim);}
+  .doc-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--border);gap:8px;}
+  .doc-info{font-size:13px;min-width:0;}
+  .doc-name{font-weight:500;}
+  .doc-meta{font-size:11.5px;color:var(--dim);}
+  .badge{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:100px;font-weight:500;white-space:nowrap;}
+  .badge-ok{background:var(--teal-soft);color:var(--teal);}
+  .badge-soon{background:var(--amber-soft);color:var(--amber);}
+  .badge-late{background:var(--rose-soft);color:var(--rose);}
+  .badge-none{background:var(--gray-soft);color:var(--dim);}
+  .del-btn{background:none;border:none;color:var(--dim);font-size:16px;cursor:pointer;padding:2px 6px;flex-shrink:0;}
+
+  .day-block{margin-bottom:14px;}
+  .day-head{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--teal);font-weight:600;margin-bottom:6px;text-transform:capitalize;display:flex;justify-content:space-between;}
+  .day-doc{font-size:13px;padding:6px 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;}
+  .day-doc .center-type{margin-left:6px;}
+  .day-doc-name{min-width:0;}
+
+  .stat-big{font-family:'Source Serif 4',serif;font-size:32px;font-weight:600;}
+  .stat-label{font-size:12px;color:var(--dim);}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .stat-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .bar-row{margin-bottom:11px;}
+  .bar-label{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;}
+  .bar-track{background:var(--border);border-radius:5px;height:9px;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--teal);border-radius:5px;}
+
+  .action-item{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--border);align-items:flex-start;}
+  .action-item:first-child{border-top:none;}
+  .action-title{font-size:13.5px;font-weight:500;}
+  .action-title.done{text-decoration:line-through;color:var(--dim);}
+  .action-date{font-size:11.5px;color:var(--dim);font-family:'IBM Plex Mono',monospace;}
+  .section-label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 4px;}
+  .section-label:first-child{margin-top:0;}
+
+  .hist-item{border-bottom:1px solid var(--border);padding:12px 0;}
+  .hist-item:last-child{border-bottom:none;}
+  .hist-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;}
+  .hist-doc{font-weight:600;font-size:14px;}
+  .hist-date{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--dim);}
+  .hist-meta{font-size:12.5px;color:var(--dim);margin-bottom:4px;}
+  .hist-notes{font-size:13px;line-height:1.5;}
+
+  .dayschk{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;}
+  .daychk{font-size:11.5px;padding:6px 9px;border-radius:7px;border:1px solid var(--border);cursor:pointer;color:var(--dim);}
+  .daychk.on{background:var(--teal);color:#fff;border-color:var(--teal);}
+
+  .warn-banner{background:var(--rose-soft);color:var(--rose);border-radius:9px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-bottom:12px;}
+  .ok-banner{background:var(--teal-soft);color:var(--teal);border-radius:9px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-bottom:12px;}
+  .file-row{display:flex;gap:8px;align-items:center;margin-top:6px;}
+  .file-row input[type=file]{flex:1;font-size:12px;}
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:100px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:50;}
+  #toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">VISITADOR MÉDICO</div>
+  <h1>Territorio</h1>
+  <p class="subtitle">Directorio, calendario del ciclo, registro de visitas y seguimiento de tu plan de acción.</p>
+
+  <div class="tabs">
+    <div class="tab active" data-view="calendario">Calendario</div>
+    <div class="tab" data-view="directorio">Directorio</div>
+    <div class="tab" data-view="registrar">Registrar</div>
+    <div class="tab" data-view="plan">Plan acción</div>
+    <div class="tab" data-view="historial">Historial</div>
+    <div class="tab" data-view="stats">Estadísticas</div>
+  </div>
+
+  <!-- CALENDARIO -->
+  <div class="view active" id="view-calendario">
+    <div class="card">
+      <p class="card-title">Progreso del ciclo</p>
+      <p class="card-sub" id="cicloSub"></p>
+      <div class="stat-grid3">
+        <div><div class="stat-big" id="cicloCompletados">0</div><div class="stat-label">completados</div></div>
+        <div><div class="stat-big" id="cicloPendientesMed">0</div><div class="stat-label">médicos pendientes</div></div>
+        <div><div class="stat-big" id="cicloDiasRest">0</div><div class="stat-label">días laborables restantes</div></div>
+      </div>
+      <div class="bar-row" style="margin-top:14px;">
+        <div class="bar-label"><span>Visitas del ciclo</span><span id="cicloVisitasLabel">0 / 0</span></div>
+        <div class="bar-track"><div class="bar-fill" id="cicloBarFill" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-title">Tus días de trabajo</p>
+      <p class="card-sub">Marca los días de la semana en los que visitas médicos. El calendario reparte las visitas pendientes entre esos días hasta el cierre del ciclo.</p>
+      <div class="dayschk" id="diasConfig"></div>
+      <label>Tope de visitas por día</label>
+      <input type="number" id="visitasPorDia" min="1" max="30" value="5">
+      <div id="cicloWarning"></div>
+    </div>
+
+    <div class="card">
+      <p class="card-title">Calendario de visitas pendientes</p>
+      <p class="card-sub">Arriba, lo que ya registraste esta semana (desde el lunes hasta hoy). Debajo, solo médicos con frecuencia asignada. Combina el máximo de especialidades distintas cada día. Pulsa ✕ para aplazar una visita a más adelante; el resto del calendario se recoloca automáticamente.</p>
+      <div id="calendarioLista"></div>
+    </div>
+  </div>
+
+  <!-- DIRECTORIO -->
+  <div class="view" id="view-directorio">
+    <div class="card">
+      <p class="card-title">Actualizar desde Excel</p>
+      <p class="card-sub">Sube el Call Plan Unificado (.xlsx) para añadir médicos nuevos o actualizar frecuencia, centro o especialidad de los que ya tienes. No borra tus visitas registradas.</p>
+      <div class="file-row">
+        <input type="file" id="fileExcel" accept=".xlsx">
+      </div>
+      <div id="excelStatus" style="font-size:12px;color:var(--dim);margin-top:8px;"></div>
+    </div>
+
+    <div class="card">
+      <p class="card-title">Añadir centro</p>
+      <label>Nombre</label>
+      <input type="text" id="nuevoCentroNombre" placeholder="Ej: Hospital Clínic">
+      <div class="row2">
+        <div>
+          <label>Tipo</label>
+          <select id="nuevoCentroTipo">
+            <option>Hospital</option>
+            <option>CAP</option>
+            <option>Privada</option>
+            <option>Farmacia</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div>
+          <label>Ciudad</label>
+          <input type="text" id="nuevoCentroZona" placeholder="Ej: Barcelona">
+        </div>
+      </div>
+      <button class="btn" id="addCentro">Añadir centro</button>
+    </div>
+
+    <div class="card">
+      <p class="card-title">Añadir médico</p>
+      <label>Nombre</label>
+      <input type="text" id="nuevoMedicoNombre" placeholder="Dr./Dra. ...">
+      <div class="row2">
+        <div>
+          <label>Centro</label>
+          <select id="nuevoMedicoCentro"></select>
+        </div>
+        <div>
+          <label>Especialidad</label>
+          <input type="text" id="nuevoMedicoEspecialidad" placeholder="Ej: Cardiología">
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label>Objetivo de visitas (este ciclo)</label>
+          <input type="number" id="nuevoMedicoObjetivo" min="0" max="30" placeholder="Ej: 3">
+        </div>
+        <div>
+          <label>Visitas ya realizadas</label>
+          <input type="number" id="nuevoMedicoRealizadas" min="0" max="30" value="0">
+        </div>
+      </div>
+      <p class="card-sub" style="margin-top:6px;">Deja el objetivo en blanco si todavía no tiene frecuencia asignada: no entrará en el calendario.</p>
+      <button class="btn" id="addMedico">Añadir médico</button>
+    </div>
+
+    <div class="card">
+      <p class="card-title">Tu directorio <span class="card-sub" id="totalDirectorio" style="margin:0;"></span></p>
+      <input type="text" class="search" id="buscarDirectorio" placeholder="Buscar médico, centro o especialidad...">
+      <div id="listaDirectorio"></div>
+    </div>
+  </div>
+
+  <!-- REGISTRAR -->
+  <div class="view" id="view-registrar">
+    <div class="card">
+      <div class="toggle2">
+        <div class="opt active" data-tipo="visita">Visita</div>
+        <div class="opt" data-tipo="email">Email</div>
+      </div>
+
+      <div id="sinMedicos" class="empty-hint" style="display:none;">Aún no tienes médicos en el directorio. Añade alguno en la pestaña "Directorio" primero.</div>
+
+      <div id="formRegistro">
+        <label>Médico</label>
+        <input type="text" class="search" id="buscarRegMedico" placeholder="Buscar médico...">
+        <select id="regMedico" size="6" style="height:auto;"></select>
+
+        <label>Fecha</label>
+        <input type="date" id="regFecha">
+
+        <div id="camposVisita">
+          <label>Interés mostrado</label>
+          <select id="regInteres">
+            <option value="Alto">Alto</option>
+            <option value="Medio" selected>Medio</option>
+            <option value="Bajo">Bajo</option>
+            <option value="Sin interés">Sin interés</option>
+          </select>
+
+          <label>Producto(s) tratados</label>
+          <input type="text" id="regProductos" placeholder="Separados por coma">
+
+          <div class="checkrow" id="chkMuestras">
+            <div class="checkbox"><svg viewBox="0 0 12 10" fill="none"><path d="M1 5L4.5 8.5L11 1.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <span>Se entregaron muestras</span>
+          </div>
+          <div class="checkrow" id="chkSeguimiento">
+            <div class="checkbox"><svg viewBox="0 0 12 10" fill="none"><path d="M1 5L4.5 8.5L11 1.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <span>Necesita seguimiento</span>
+          </div>
+        </div>
+
+        <label>Notas</label>
+        <textarea id="regNotas" placeholder="..."></textarea>
+
+        <button class="btn" id="guardarRegistro">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAN DE ACCIÓN -->
+  <div class="view" id="view-plan">
+    <div class="card">
+      <p class="card-title">Fichas por especialidad y hospital</p>
+      <p class="card-sub">Filas 19-26, columnas K-P del Excel CM3T08 26-27.</p>
+      <table style="width:100%; border-collapse:collapse; font-size:12px;"><thead><tr style="background:#E4E0D6; font-weight:600;"><th style="border:1px solid #ddd; padding:8px;">Especialidad</th><th style="border:1px solid #ddd; padding:8px;">F. Sant Joan</th><th style="border:1px solid #ddd; padding:8px;">Hosp. Clínic</th><th style="border:1px solid #ddd; padding:8px;">Hosp. Plató</th><th style="border:1px solid #ddd; padding:8px;">PR CA</th><th style="border:1px solid #ddd; padding:8px;">Total</th></tr></thead><tbody><tr style="background:#fff;"><td style="border:1px solid #ddd; padding:8px;">AP</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">51</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">209</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">0</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">—</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">259.20</td></tr><tr style="background:#fff;"><td style="border:1px solid #ddd; padding:8px;">CA</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">6</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">36</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">—</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">8</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">51</td></tr><tr style="background:#fff;"><td style="border:1px solid #ddd; padding:8px;">MI</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">5</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">21.44</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">6.32</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">—</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">33</td></tr><tr style="background:#fff;"><td style="border:1px solid #ddd; padding:8px;">NE</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">0</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">4.40</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">1.30</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">—</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">5</td></tr><tr style="background:#fff;"><td style="border:1px solid #ddd; padding:8px;">CV</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">2</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">6.60</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">1</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">—</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">10</td></tr><tr style="background:#fff;"><td style="border:1px solid #ddd; padding:8px;">NU</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">1.38</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">3.85</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">1.14</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">—</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">6.37</td></tr><tr style="background:#E4E0D6; font-weight:bold;"><td style="border:1px solid #ddd; padding:8px;">TOTAL</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">65.38</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">281.28</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">9.76</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">8</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">364.57</td></tr></tbody></table>
+    </div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="view" id="view-historial">
+    <div class="card">
+      <div class="toggle2">
+        <div class="opt active" data-filtro="todo">Todo</div>
+        <div class="opt" data-filtro="visita">Visitas</div>
+        <div class="opt" data-filtro="email">Emails</div>
+      </div>
+      <div class="row2">
+        <input type="text" class="search" id="buscarHistorial" placeholder="Nombre y apellidos del médico..." style="margin-bottom:0; flex:1;">
+        <button class="btn btn-sm" id="buscarHistorialBtn" style="margin-top:0; flex:0 0 auto;">Buscar</button>
+      </div>
+      <div id="resumenHistorialMedico"></div>
+      <div id="listaHistorial" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="view" id="view-stats">
+    <div class="card">
+      <p class="card-title">Progreso del ciclo por especialidad</p>
+      <p class="card-sub">Visitas realizadas frente al objetivo de cada especialidad. Se actualiza según pasan los días y registras visitas.</p>
+      <div id="statProgresoEspecialidad"></div>
+    </div>
+  </div>
+
+</div>
+<div id="toast"></div>
+
+<script>
+/* ======================= DATOS SEMILLA (Call Plan Unificado) ======================= */
+const SEED_MEDICOS = [{"nombre": "SILVIA PERE QUESADA", "especialidad": "ATENCION PRIMARIA", "centro": "ANDREA SANSI CLINIC", "ciudad": "BARCELONA", "direccion": "ANDREA SANSI CLINIC, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-08-04", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "BERTA FERNANDEZ CAMINS", "especialidad": "ATENCION PRIMARIA", "centro": "AREA MEDICINA TRANSLACIONAL ENDOCRINOLOGIA, DIABETES Y NUTRICION", "ciudad": "BARCELONA", "direccion": "AREA MEDICINA TRANSLACIONAL ENDOCRINOLOGIA, DIABETES Y NUTRICION, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-18", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "BENITO ANDRES SAINZ GONZALEZ DE LA PEÑA", "especialidad": "CARDIOLOGÍA", "centro": "ASISTENCIA CARDIOLOGICA DR CASTRO", "ciudad": "BARCELONA", "direccion": "ASISTENCIA CARDIOLOGICA DR CASTRO, BARCELONA, España", "correo": "bsainz70@gmail.com", "grado": "C", "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-07-13", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "BIOLKYS YANIRA ZORIO VALDES", "especialidad": "CARDIOLOGÍA", "centro": "ASISTENCIA CARDIOLOGICA DR CASTRO", "ciudad": "BARCELONA", "direccion": "ASISTENCIA CARDIOLOGICA DR CASTRO, BARCELONA, España", "correo": "biolkys73@gmail.com", "grado": "C", "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-06-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA FLAVIA MARTINEZ COPELLO", "especialidad": "CARDIOLOGÍA", "centro": "ASISTENCIA CARDIOLOGICA DR CASTRO", "ciudad": "BARCELONA", "direccion": "ASISTENCIA CARDIOLOGICA DR CASTRO, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-30", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "AITANA NUÑEZ BAGUR", "especialidad": "ATENCION PRIMARIA", "centro": "CAP CASANOVA", "ciudad": "BARCELONA", "direccion": "C/ Rosselló, 161, 08036 Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": 3.0, "ultimaVisita": "2026-07-06", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "AMIR MOHAMMAD SAFA SADAGHIANI", "especialidad": "ATENCION PRIMARIA", "centro": "CAP MANSO", "ciudad": "BARCELONA", "direccion": "C/ Manso, 19, 08015 Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-06", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "MONTSERRAT FARRE FARRE", "especialidad": "ATENCION PRIMARIA", "centro": "CAP SANTS", "ciudad": "BARCELONA", "direccion": "Ptge Vapor Vell, 6-8, Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-07-02", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "MIGUEL ANGEL GOMEZ PEREZ", "especialidad": "CARDIOLOGÍA", "centro": "CLIN. CORACHAN NORD", "ciudad": "BARCELONA", "direccion": "CLIN. CORACHAN NORD, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-29", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANA CAROLINA IGLESIAS ECHEVERRIA", "especialidad": "CARDIOLOGÍA", "centro": "CLINICA CORACHAN", "ciudad": "BARCELONA", "direccion": "CLINICA CORACHAN, BARCELONA, España", "correo": null, "grado": null, "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-29", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "EDUARDO MONTULL RAFOLS", "especialidad": "CIRUGÍA VASCULAR", "centro": "CLINICA JUBERT", "ciudad": "BARCELONA", "direccion": "CLINICA JUBERT, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 2.0, "ultimaVisita": "2026-07-06", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "JOAQUIN JUBERT ESTIVARIZ", "especialidad": "CIRUGÍA VASCULAR", "centro": "CLINICA JUBERT", "ciudad": "BARCELONA", "direccion": "CLINICA JUBERT, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 2.0, "ultimaVisita": "2026-07-06", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "ANDRES GUERRERO CARREÑO", "especialidad": "ATENCION PRIMARIA", "centro": "CONSULTA PRIVADA", "ciudad": "BARCELONA", "direccion": "CONSULTA PRIVADA, BARCELONA, España", "correo": "andresguerrero58@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JORGE ARGIMON PALLAS", "especialidad": "MEDICINA INTERNA", "centro": "CONSULTA PRIVADA", "ciudad": "BARCELONA", "direccion": "CONSULTA PRIVADA, BARCELONA, España", "correo": "jargimonp@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-05-14", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIBEL LOPERA ESTEBAN", "especialidad": "ATENCION PRIMARIA", "centro": "CONSULTA PRIVADA LOPERA ESTEBAN", "ciudad": "BARCELONA", "direccion": "CONSULTA PRIVADA LOPERA ESTEBAN, BARCELONA, España", "correo": "dralopera@gmail.com", "grado": "C", "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-06-26", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "GEMMA MARTINEZ ALMAGRO", "especialidad": "ATENCION PRIMARIA", "centro": "CUAP MANSO", "ciudad": "BARCELONA", "direccion": "C/ Manso, 19, 08015 Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "AGATA RAQUEL LEON GARCIA", "especialidad": "ATENCION PRIMARIA", "centro": "DATA_PROTECTION", "ciudad": "BARCELONA", "direccion": "DATA_PROTECTION, BARCELONA, España", "correo": "agathe.leon@quironsalud.es", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "AMANDA CID CANTARERO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": "amandacid@gmail.com", "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-30", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANA LAURA MUÑOZ RUBIO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": "amunozrubio.bcn.ics@gencat.cat", "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-30", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "BRENDA ELIZABETH RIESGO ESCUDERO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-27", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CARLOS EDUARDO ROJAS ABAD", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": "rojasabadcarlos@gmail.com", "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-05-14", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ELIAS MORON BERMEJO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": "eliasmoron@gmail.com", "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-30", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ELISABET ESCOLA RIPOLL", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "GLORIA SEGURA TORRENTS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": "gloriasegurat@hotmail.com", "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-16", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ISABEL GINER RODRIGUEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": "27533igr@comb.cat", "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-05-27", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JOSEP LLAONA BUTIÑA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": "32764jlb@comb.cat", "grado": "A", "objetivo": 3.0, "realizadas": 4.0, "ultimaVisita": "2026-07-09", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA DOLORES MORIANO GARCIA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": "dmoriano.bcn.ics@gencat.cat", "grado": "A", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARTA JUAN PALACIOS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-27", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "RAQUEL MARTIN PEÑACOBA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": "raqueluis310703@yahoo.es", "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-30", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "RONALD FABIAN JALIL REYES", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-06", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SAUL CARRILLO SARMIENTO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "YOLANDA LINARES SICILIA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2A SANT ANTONI", "ciudad": "BARCELONA", "direccion": "EAP 2A SANT ANTONI, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "ANA FRANCO ALONSO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": "dr_ana@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-06-11", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANA ISABEL LIBERAL PLANAS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": "ailiberal.bcn.ics@gencat.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-08-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "BIBIANA DEIXENS MARTINEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": "bdeixens@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-08-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CARMEN OLMOS DOMINGUEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CRISTINA CARBONELL ABELLA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": "ccarbonell.bcn.ics@gentcat.cat", "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "ENCARNACION RAMON MENESES", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": "encarnaramonm@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "EULALIA YAÑEZ RODRIGUEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "GIANLUCA MINISOLA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-08-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA EUGENIA LLORET CORTES", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-08-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA PILAR LOZANO ESTEBAN", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": "mp_lozano@yahoo.es", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-30", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA TERESA MARTINEZ MENDOZA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": "23979mmm@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-06-16", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARTA GARCIA GONZALEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": "mgarciago.cc.ics@gencat.cat", "grado": "C", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-08-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MERITXELL MASIP BESO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": "meritxellmasip@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-08-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MIGDALIA RODRIGUEZ JORGE", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "PABLO GRACIA ALONSO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": "paugraciaalonso@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-08-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "VERONICA DOMINGUEZ PANADERO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2B VIA ROMA", "ciudad": "BARCELONA", "direccion": "EAP 2B VIA ROMA, BARCELONA, España", "correo": "vdominguezpanadero@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-08-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ADRIANA AZORIN ARMELA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2D UNIVERSITAT", "ciudad": "BARCELONA", "direccion": "EAP 2D UNIVERSITAT, BARCELONA, España", "correo": "adriana4_20@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-09", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANGELA BELTRAN GUERRA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2D UNIVERSITAT", "ciudad": "BARCELONA", "direccion": "EAP 2D UNIVERSITAT, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-05-28", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "DAVID LOPEZ HERAS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2D UNIVERSITAT", "ciudad": "BARCELONA", "direccion": "EAP 2D UNIVERSITAT, BARCELONA, España", "correo": "drlopezheras@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JORGE JOSE HERNANDEZ RODRIGUEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2D UNIVERSITAT", "ciudad": "BARCELONA", "direccion": "EAP 2D UNIVERSITAT, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-06-11", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JOSE MIGUEL LLOVET LOMBARTE", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2D UNIVERSITAT", "ciudad": "BARCELONA", "direccion": "EAP 2D UNIVERSITAT, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MAGDALENA CUBELLS RIBE", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2D UNIVERSITAT", "ciudad": "BARCELONA", "direccion": "EAP 2D UNIVERSITAT, BARCELONA, España", "correo": "magdacubells@yahoo.es", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-06-30", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA LOURDES ALONSO VALLES", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2D UNIVERSITAT", "ciudad": "BARCELONA", "direccion": "EAP 2D UNIVERSITAT, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-06-11", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA LUZ GOMEZ LOPEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2D UNIVERSITAT", "ciudad": "BARCELONA", "direccion": "EAP 2D UNIVERSITAT, BARCELONA, España", "correo": "18398mgl@comb.cat", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIANA BELEN ACOSTA DESTEFANO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2D UNIVERSITAT", "ciudad": "BARCELONA", "direccion": "EAP 2D UNIVERSITAT, BARCELONA, España", "correo": "maruacosta12@gmail.com", "grado": "D", "objetivo": 1.0, "realizadas": 2.0, "ultimaVisita": "2026-06-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARTA GUERRERO MUÑOZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2D UNIVERSITAT", "ciudad": "BARCELONA", "direccion": "EAP 2D UNIVERSITAT, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MONTSERRAT GIL TIMON", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2D UNIVERSITAT", "ciudad": "BARCELONA", "direccion": "EAP 2D UNIVERSITAT, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-21", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "PATRICIA ESPONA SANCHEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2D UNIVERSITAT", "ciudad": "BARCELONA", "direccion": "EAP 2D UNIVERSITAT, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "ALFONSO JAVIER PEREZ JIMENEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2E CASANOVA", "ciudad": "BARCELONA", "direccion": "EAP 2E CASANOVA, BARCELONA, España", "correo": "alfonsojnew@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CARLOS GOMEZ RUIZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2E CASANOVA", "ciudad": "BARCELONA", "direccion": "EAP 2E CASANOVA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 2.0, "ultimaVisita": "2026-07-06", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "FRANCISCO PONT BARRIO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2E CASANOVA", "ciudad": "BARCELONA", "direccion": "EAP 2E CASANOVA, BARCELONA, España", "correo": "24752fpb@comb.cat", "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-06", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "LAIA CAYUELAS REDONDO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2E CASANOVA", "ciudad": "BARCELONA", "direccion": "EAP 2E CASANOVA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 3.0, "ultimaVisita": "2026-07-06", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SIRA CASABLANCAS FIGUERAS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2E CASANOVA", "ciudad": "BARCELONA", "direccion": "EAP 2E CASANOVA, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-07-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "TAMARA HERVIS LEE", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2E CASANOVA", "ciudad": "BARCELONA", "direccion": "EAP 2E CASANOVA, BARCELONA, España", "correo": "tama_hervis@yahoo.es", "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "VALENTIN ARAGUNDE MIGUENS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2E CASANOVA", "ciudad": "BARCELONA", "direccion": "EAP 2E CASANOVA, BARCELONA, España", "correo": "varagunde@gmail.com", "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-09", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "VANESA JORGE SOSTOA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 2E CASANOVA", "ciudad": "BARCELONA", "direccion": "EAP 2E CASANOVA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "CARMEN DE FUENTES GUILLEN", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3A LES HORTES-POBLE SEC", "ciudad": "BARCELONA", "direccion": "EAP 3A LES HORTES-POBLE SEC, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-06-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "GISEL ELIZABETH WABISZCZEWICZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3A LES HORTES-POBLE SEC", "ciudad": "BARCELONA", "direccion": "EAP 3A LES HORTES-POBLE SEC, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-06-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANDRES FORMOSO DAVILA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3B POBLE SEC", "ciudad": "BARCELONA", "direccion": "EAP 3B POBLE SEC, BARCELONA, España", "correo": "anforda@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANGELA VIAPLANA SERRA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3B POBLE SEC", "ciudad": "BARCELONA", "direccion": "EAP 3B POBLE SEC, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-07-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CAROLINA GALINDO PARRES", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3B POBLE SEC", "ciudad": "BARCELONA", "direccion": "EAP 3B POBLE SEC, BARCELONA, España", "correo": "carolinagalindo0304@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-28", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "GERARDO VIEYTES SUAREZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3B POBLE SEC", "ciudad": "BARCELONA", "direccion": "EAP 3B POBLE SEC, BARCELONA, España", "correo": "gvieytes@gencat.cat", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "GIANFRANCO PROCOPIO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3B POBLE SEC", "ciudad": "BARCELONA", "direccion": "EAP 3B POBLE SEC, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "GUILLEM FLUXA TERRASA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3B POBLE SEC", "ciudad": "BARCELONA", "direccion": "EAP 3B POBLE SEC, BARCELONA, España", "correo": "guillemfluxa@hotmail.com", "grado": "C", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-28", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JORDI ALTIRRIBA VIVES", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3B POBLE SEC", "ciudad": "BARCELONA", "direccion": "EAP 3B POBLE SEC, BARCELONA, España", "correo": "altirriba@gencat.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MONTSERRAT CAUBET GOMA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3B POBLE SEC", "ciudad": "BARCELONA", "direccion": "EAP 3B POBLE SEC, BARCELONA, España", "correo": "montse.caubet@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "PRUDENCIA TORIBIO MEDINA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3B POBLE SEC", "ciudad": "BARCELONA", "direccion": "EAP 3B POBLE SEC, BARCELONA, España", "correo": "redondita8@yahoo.com", "grado": "B", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANTONIO UBIETO LOPE", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3D BORDETA MAGORIA", "ciudad": "BARCELONA", "direccion": "EAP 3D BORDETA MAGORIA, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-17", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "FRANCISCO PALLARES JIMENEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3D BORDETA MAGORIA", "ciudad": "BARCELONA", "direccion": "EAP 3D BORDETA MAGORIA, BARCELONA, España", "correo": "fpallaresj@yahoo.es", "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-17", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MATILDE FUENTES RIAZA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3D BORDETA MAGORIA", "ciudad": "BARCELONA", "direccion": "EAP 3D BORDETA MAGORIA, BARCELONA, España", "correo": "mfrfuentes@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-06-05", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MIGUEL ANGEL SARLAT RIBAS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3D BORDETA MAGORIA", "ciudad": "BARCELONA", "direccion": "EAP 3D BORDETA MAGORIA, BARCELONA, España", "correo": "sarlatribas@yahoo.es", "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-17", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SANDRA RIERA CARMONA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3D BORDETA MAGORIA", "ciudad": "BARCELONA", "direccion": "EAP 3D BORDETA MAGORIA, BARCELONA, España", "correo": "sriera77@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-07-17", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANDRES ALTES BORONAT", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3E SANTS", "ciudad": "BARCELONA", "direccion": "EAP 3E SANTS, BARCELONA, España", "correo": "aaltesboronat@yahoo.com", "grado": "B", "objetivo": 3.0, "realizadas": 4.0, "ultimaVisita": "2026-07-02", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CARLOTA VICTORIA MUÑOZ DE LA NAVA BAILE", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3E SANTS", "ciudad": "BARCELONA", "direccion": "EAP 3E SANTS, BARCELONA, España", "correo": "cmunozdelanava.bcn.ics@gencat.cat", "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-13", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ESTHER MAROTO MARTINEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3E SANTS", "ciudad": "BARCELONA", "direccion": "EAP 3E SANTS, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-13", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA ANGELES MINGUEZA LAZARO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3E SANTS", "ciudad": "BARCELONA", "direccion": "EAP 3E SANTS, BARCELONA, España", "correo": "angelesmingueza@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-13", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA BLANCA SARASA SOLA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3E SANTS", "ciudad": "BARCELONA", "direccion": "EAP 3E SANTS, BARCELONA, España", "correo": "bsarasa.bcn.ics@gencat.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-06-08", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA EVA CALVO ROSA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3E SANTS", "ciudad": "BARCELONA", "direccion": "EAP 3E SANTS, BARCELONA, España", "correo": "evacalvo.bcn.ics@gencat.cat", "grado": "B", "objetivo": 3.0, "realizadas": 4.0, "ultimaVisita": "2026-07-02", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARISOL SANCHEZ SERNA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3E SANTS", "ciudad": "BARCELONA", "direccion": "EAP 3E SANTS, BARCELONA, España", "correo": "marisol28719@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 4.0, "ultimaVisita": "2026-07-02", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARTA SOLER COSTA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3E SANTS", "ciudad": "BARCELONA", "direccion": "EAP 3E SANTS, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 3.0, "ultimaVisita": "2026-06-08", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SERGIO PALET PARAMO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3E SANTS", "ciudad": "BARCELONA", "direccion": "EAP 3E SANTS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-13", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SONIA RODRIGUEZ MARTINEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3E SANTS", "ciudad": "BARCELONA", "direccion": "EAP 3E SANTS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-07-13", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ALICIA PUY PENELLA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3G NUMANCIA", "ciudad": "BARCELONA", "direccion": "EAP 3G NUMANCIA, BARCELONA, España", "correo": "aliciapuy10@gmail.com", "grado": "C", "objetivo": 3.0, "realizadas": 4.0, "ultimaVisita": "2026-07-08", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANTONIO MONTILLA IBARRA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3G NUMANCIA", "ciudad": "BARCELONA", "direccion": "EAP 3G NUMANCIA, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 4.0, "ultimaVisita": "2026-07-08", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CARMEN PALLARES SERRANO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3G NUMANCIA", "ciudad": "BARCELONA", "direccion": "EAP 3G NUMANCIA, BARCELONA, España", "correo": "carmepallares@yahoo.es", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-20", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CRISTINA POZO DIAZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3G NUMANCIA", "ciudad": "BARCELONA", "direccion": "EAP 3G NUMANCIA, BARCELONA, España", "correo": "cpozo.bcn.ics@gencat.cat", "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-20", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JORDI HOYO SANCHEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3G NUMANCIA", "ciudad": "BARCELONA", "direccion": "EAP 3G NUMANCIA, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-08", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARINA GIGANTE LOPEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3G NUMANCIA", "ciudad": "BARCELONA", "direccion": "EAP 3G NUMANCIA, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "YOLANDA HERREROS HERREROS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3G NUMANCIA", "ciudad": "BARCELONA", "direccion": "EAP 3G NUMANCIA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-07-08", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "YOLANDA ROMERO FERNANDEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3G NUMANCIA", "ciudad": "BARCELONA", "direccion": "EAP 3G NUMANCIA, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-07-08", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANA ISABEL JIMENEZ LOZANO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3I BADAL", "ciudad": "BARCELONA", "direccion": "EAP 3I BADAL, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-06-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANNA PICAS JUFRESA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3I BADAL", "ciudad": "BARCELONA", "direccion": "EAP 3I BADAL, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-06-29", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ENRIQUE VELEZ IGLESIAS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3I BADAL", "ciudad": "BARCELONA", "direccion": "EAP 3I BADAL, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-20", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "GUSTAVO JAVIER DE TORRES RAMIREZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3I BADAL", "ciudad": "BARCELONA", "direccion": "EAP 3I BADAL, BARCELONA, España", "correo": "gdetorres2001@yahoo.es", "grado": "B", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-05-12", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JAVIER MARTINEZ BRUBALLA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3I BADAL", "ciudad": "BARCELONA", "direccion": "EAP 3I BADAL, BARCELONA, España", "correo": "javi.mabr.96@gmail.com", "grado": "C", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-05-12", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JOSE MANUEL CRUZ DOMENECH", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3I BADAL", "ciudad": "BARCELONA", "direccion": "EAP 3I BADAL, BARCELONA, España", "correo": "jmcruz.bcn.ics@gencat.cat", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-20", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JUDITH SANCHEZ CANOVAS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3I BADAL", "ciudad": "BARCELONA", "direccion": "EAP 3I BADAL, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-20", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JUDITH SOLE SANCHO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3I BADAL", "ciudad": "BARCELONA", "direccion": "EAP 3I BADAL, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-05-12", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "LAIA SANTASUSAGNA TERRADAS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3I BADAL", "ciudad": "BARCELONA", "direccion": "EAP 3I BADAL, BARCELONA, España", "correo": null, "grado": "B", "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "MARIA ANGELES SULE SALVADO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3I BADAL", "ciudad": "BARCELONA", "direccion": "EAP 3I BADAL, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-20", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA ISABEL GAZQUEZ PEREZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3I BADAL", "ciudad": "BARCELONA", "direccion": "EAP 3I BADAL, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-20", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MONICA AMOROS BROTONS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3I BADAL", "ciudad": "BARCELONA", "direccion": "EAP 3I BADAL, BARCELONA, España", "correo": "mamorosb.bcn.ics@gencat.cat", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-20", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MONTSERRAT BURRULL GIMENO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 3I BADAL", "ciudad": "BARCELONA", "direccion": "EAP 3I BADAL, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-20", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ALEJANDRO ROSAS NAVARRO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4A MONTNEGRE", "ciudad": "BARCELONA", "direccion": "EAP 4A MONTNEGRE, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 3.0, "ultimaVisita": "2026-07-07", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ARLETHE DAYA ARISPE GUTIERREZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4A MONTNEGRE", "ciudad": "BARCELONA", "direccion": "EAP 4A MONTNEGRE, BARCELONA, España", "correo": "adag_nen@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CARLOS RUEDA BEAS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4A MONTNEGRE", "ciudad": "BARCELONA", "direccion": "EAP 4A MONTNEGRE, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-05-19", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CAROLINA BERMEJO NAVARRO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4A MONTNEGRE", "ciudad": "BARCELONA", "direccion": "EAP 4A MONTNEGRE, BARCELONA, España", "correo": "carolabn@yahoo.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-06-25", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CLARA ORTI SEGARRA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4A MONTNEGRE", "ciudad": "BARCELONA", "direccion": "EAP 4A MONTNEGRE, BARCELONA, España", "correo": "clara.orti.s@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-07", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ELISABETH NAVARRO FONTANELLAS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4A MONTNEGRE", "ciudad": "BARCELONA", "direccion": "EAP 4A MONTNEGRE, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-07", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JONATHAN CORTES GARCIA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4A MONTNEGRE", "ciudad": "BARCELONA", "direccion": "EAP 4A MONTNEGRE, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-05-19", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JULIO CESAR VERASTEGUI CORDOVA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4A MONTNEGRE", "ciudad": "BARCELONA", "direccion": "EAP 4A MONTNEGRE, BARCELONA, España", "correo": "jcverategui.apms.ics@gencat.cat", "grado": "C", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "LUIS QUINZAÑOS DE VISA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4A MONTNEGRE", "ciudad": "BARCELONA", "direccion": "EAP 4A MONTNEGRE, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-06-25", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MAITE COLL PERONA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4A MONTNEGRE", "ciudad": "BARCELONA", "direccion": "EAP 4A MONTNEGRE, BARCELONA, España", "correo": "mcoll.bcn.ics@gentcat.cat", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-05-26", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA DICENTA MORENO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4A MONTNEGRE", "ciudad": "BARCELONA", "direccion": "EAP 4A MONTNEGRE, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-07-06", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARTA AMATLLER COROMINAS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4A MONTNEGRE", "ciudad": "BARCELONA", "direccion": "EAP 4A MONTNEGRE, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-06-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARTA MARTI TENA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4A MONTNEGRE", "ciudad": "BARCELONA", "direccion": "EAP 4A MONTNEGRE, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-06-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "NURIA AUBACH FUERTES", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4A MONTNEGRE", "ciudad": "BARCELONA", "direccion": "EAP 4A MONTNEGRE, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-06", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ALEJANDRO RIBERA FERNANDEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4B LES CORTS PEDRALBES", "ciudad": "BARCELONA", "direccion": "EAP 4B LES CORTS PEDRALBES, BARCELONA, España", "correo": "ariberaf@yahoo.es", "grado": "C", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-07", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CARMEN COSTA MONTSERRAT", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4B LES CORTS PEDRALBES", "ciudad": "BARCELONA", "direccion": "EAP 4B LES CORTS PEDRALBES, BARCELONA, España", "correo": "mcosta.bcn.ics@gencat.cat", "grado": "C", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JESSHICA LIZETH DELGADO CASTILLO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4B LES CORTS PEDRALBES", "ciudad": "BARCELONA", "direccion": "EAP 4B LES CORTS PEDRALBES, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "NOEMI ESCOLAR SANCHO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4B LES CORTS PEDRALBES", "ciudad": "BARCELONA", "direccion": "EAP 4B LES CORTS PEDRALBES, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "OLIVIA BENEITEZ NUÑEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4B LES CORTS PEDRALBES", "ciudad": "BARCELONA", "direccion": "EAP 4B LES CORTS PEDRALBES, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-07-07", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ADRIAN DIAZ CASTILLO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-07-15", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANDREA LOPEZ-MOLINA SANCHEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-06-09", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "BIBIANA CONTRERAS RARIS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-14", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "DAVID MARTI GRAU", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-14", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ELISABETH MARIA AVILA POZO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-14", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "IGNACIO MENACHO PASCUAL", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-30", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JUAN IGNACIO CARCAMO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-14", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARCOS SANCHEZ SANCHEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA LUISA BENITO SERRANO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-14", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA LUISA MORO ESTEBAN", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "MINERVA MAS HEREDIA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-05-05", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MONTSERRAT PINYOL MARTINEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "PAULA VILLACORTA GALINDO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-30", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SALVADOR SITJAR MARTINEZ DE SAS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-28", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "VANESA MAURI VAZQUEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-14", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "XAVIER OTERO SERRA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 4C LES CORTS", "ciudad": "BARCELONA", "direccion": "EAP 4C LES CORTS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-14", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ADRIAN MIÑARRO POYATO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5A MARC AURELI", "ciudad": "BARCELONA", "direccion": "EAP 5A MARC AURELI, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-07-02", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANA MARIA SANTIN PEREZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5A MARC AURELI", "ciudad": "BARCELONA", "direccion": "EAP 5A MARC AURELI, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-08-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANNA ARROYO FERNANDEZ DE LIENCRES", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5A MARC AURELI", "ciudad": "BARCELONA", "direccion": "EAP 5A MARC AURELI, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "CRISTINA RAMON SAURI", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5A MARC AURELI", "ciudad": "BARCELONA", "direccion": "EAP 5A MARC AURELI, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-07-28", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "GIOVANNA MIRANDA AROSTEGUI", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5A MARC AURELI", "ciudad": "BARCELONA", "direccion": "EAP 5A MARC AURELI, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-08-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JOSE MANUEL LAZARO MARTINEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5A MARC AURELI", "ciudad": "BARCELONA", "direccion": "EAP 5A MARC AURELI, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-08-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "LAURA CRISTEL FERRER", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5A MARC AURELI", "ciudad": "BARCELONA", "direccion": "EAP 5A MARC AURELI, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-08-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MIREIA MESTRES SEGARRA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5A MARC AURELI", "ciudad": "BARCELONA", "direccion": "EAP 5A MARC AURELI, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "SILVIA CANIVELL FUSTE", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5A MARC AURELI", "ciudad": "BARCELONA", "direccion": "EAP 5A MARC AURELI, BARCELONA, España", "correo": "scanivell@gmail.com", "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-17", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "BERTA MONTSALVATGE ROCAMORA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5B SANT ELIES", "ciudad": "BARCELONA", "direccion": "EAP 5B SANT ELIES, BARCELONA, España", "correo": "berta@interkonet.com", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-28", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "EVA MATINERO ROMERO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5B SANT ELIES", "ciudad": "BARCELONA", "direccion": "EAP 5B SANT ELIES, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-06-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "HENRY FERRUFINO MENDOZA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5B SANT ELIES", "ciudad": "BARCELONA", "direccion": "EAP 5B SANT ELIES, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-28", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JORDI JAUMANDREU PATXOT", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5B SANT ELIES", "ciudad": "BARCELONA", "direccion": "EAP 5B SANT ELIES, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-06-04", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "LIDIA ARPAL SAGRISTA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5B SANT ELIES", "ciudad": "BARCELONA", "direccion": "EAP 5B SANT ELIES, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-06-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "LORENA MARTINEZ VILLAMIZAR", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5B SANT ELIES", "ciudad": "BARCELONA", "direccion": "EAP 5B SANT ELIES, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "MADALINA BEATRICE MORNA BEJENARU", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5B SANT ELIES", "ciudad": "BARCELONA", "direccion": "EAP 5B SANT ELIES, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-28", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARGARITA RIBES ARDANUY", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5B SANT ELIES", "ciudad": "BARCELONA", "direccion": "EAP 5B SANT ELIES, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "MARIA SERVER CLIMENT", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5B SANT ELIES", "ciudad": "BARCELONA", "direccion": "EAP 5B SANT ELIES, BARCELONA, España", "correo": "mserver.bcn.ics@gencat.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-28", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA VICTORIA CENDROS CAMARA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5B SANT ELIES", "ciudad": "BARCELONA", "direccion": "EAP 5B SANT ELIES, BARCELONA, España", "correo": "vcendros@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-17", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "NATALIA LOPEZ JORDAN", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5B SANT ELIES", "ciudad": "BARCELONA", "direccion": "EAP 5B SANT ELIES, BARCELONA, España", "correo": "nathalielj@hotmail.com", "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-28", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ALAN PERNA SCHWAB", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5C SARRIA", "ciudad": "BARCELONA", "direccion": "EAP 5C SARRIA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "AURORA RIPOLL MORA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5C SARRIA", "ciudad": "BARCELONA", "direccion": "EAP 5C SARRIA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-07-10", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CLARA CASAS MOVILLA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5C SARRIA", "ciudad": "BARCELONA", "direccion": "EAP 5C SARRIA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "GABRIEL CUATRECASAS CAMBRA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5C SARRIA", "ciudad": "BARCELONA", "direccion": "EAP 5C SARRIA, BARCELONA, España", "correo": "gabrielcc@gmail.com", "grado": "B", "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "JOSEP ABADAL SASTRE", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5C SARRIA", "ciudad": "BARCELONA", "direccion": "EAP 5C SARRIA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "JUAN IGNACIO PASO LUNA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5C SARRIA", "ciudad": "BARCELONA", "direccion": "EAP 5C SARRIA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "PATRICIA MONTENEGRO LAFONT", "especialidad": "ATENCION PRIMARIA", "centro": "EAP 5C SARRIA", "ciudad": "BARCELONA", "direccion": "EAP 5C SARRIA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "AMPARO HERVAS DOCON", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": "ahervas@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-06-10", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANDREA TORRABADELLA GOMARIZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": "atorraba@clinic.cat", "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANNA PEÑA SANROMA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": "apena@clinic.cat", "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-10", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CLAUDIA LORENA AMARILLA MOLINAS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-21", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "EMMA CATERINA MAGRANER OLIVER", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": "magraner@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-21", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "INMACULADA GARRELL LLUIS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-02", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JOAN CLOS SOLDEVILA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": "28421jcs@comb.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-21", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "LIDIA PALLISA GABRIEL", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": "lpallisa@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-06-10", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA PILAR NAVARRETE DURAN", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": "pnavarre@clinic.cat", "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-02", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARTA NAVARRO GONZALEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-10", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MIREIA SANS CORRALES", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "NURIA LOPEZ BATET", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": "nlopezbatet@yhaoo.es", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-06-10", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "NURIA SANCHEZ RUANO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": "nsanchez@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-10", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "OLGA BARBA AVILA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": "obarba@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-21", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "PERE JOAN ESCASANY SERRA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-21", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SANDRA MURGUI BETRAN", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": "smurgui@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-02", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SANDRA PAREDES GARCIA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": "sandra.paredes91@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-10", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SONIA MILUSKA MAMANI PALOMINO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": "smamani13@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-02", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SUSANA RIVAS VILELA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP COMTE BORRELL", "ciudad": "BARCELONA", "direccion": "EAP COMTE BORRELL, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-06-10", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANA GONZALEZ LOPEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP DOCTOR CARLES RIBAS", "ciudad": "BARCELONA", "direccion": "EAP DOCTOR CARLES RIBAS, BARCELONA, España", "correo": "anagonzalez_1526@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-06-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ARACELI HORTENSIA GOMEZ TEMPLADO", "especialidad": "ATENCION PRIMARIA", "centro": "EAP DOCTOR CARLES RIBAS", "ciudad": "BARCELONA", "direccion": "EAP DOCTOR CARLES RIBAS, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-31", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "BERTA ELIAS CANALS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP DOCTOR CARLES RIBAS", "ciudad": "BARCELONA", "direccion": "EAP DOCTOR CARLES RIBAS, BARCELONA, España", "correo": "berta_elias@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JOSE ANTONIO TERUEL GILA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP DOCTOR CARLES RIBAS", "ciudad": "BARCELONA", "direccion": "EAP DOCTOR CARLES RIBAS, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-20", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "LLUIS COMALRENA DE SOBREGRAU FERNANDEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP DOCTOR CARLES RIBAS", "ciudad": "BARCELONA", "direccion": "EAP DOCTOR CARLES RIBAS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA AMPARO DE LA POZA ABAD", "especialidad": "ATENCION PRIMARIA", "centro": "EAP DOCTOR CARLES RIBAS", "ciudad": "BARCELONA", "direccion": "EAP DOCTOR CARLES RIBAS, BARCELONA, España", "correo": "mariamdelapoza@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-20", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA INMACULADA GIL CANALDA", "especialidad": "ATENCION PRIMARIA", "centro": "EAP DOCTOR CARLES RIBAS", "ciudad": "BARCELONA", "direccion": "EAP DOCTOR CARLES RIBAS, BARCELONA, España", "correo": "igilcanalda@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-20", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARTA SELLARES CROUS", "especialidad": "ATENCION PRIMARIA", "centro": "EAP DOCTOR CARLES RIBAS", "ciudad": "BARCELONA", "direccion": "EAP DOCTOR CARLES RIBAS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-31", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MIREIA SIMONET CAÑETE", "especialidad": "ATENCION PRIMARIA", "centro": "EAP DOCTOR CARLES RIBAS", "ciudad": "BARCELONA", "direccion": "EAP DOCTOR CARLES RIBAS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-31", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "NAOUAL BENAABLA LECHHAB OUADRASSI", "especialidad": "ATENCION PRIMARIA", "centro": "EAP DOCTOR CARLES RIBAS", "ciudad": "BARCELONA", "direccion": "EAP DOCTOR CARLES RIBAS, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "NURIA SELLARES GOMEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP DOCTOR CARLES RIBAS", "ciudad": "BARCELONA", "direccion": "EAP DOCTOR CARLES RIBAS, BARCELONA, España", "correo": "airuncapri@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "VICTOR MANUEL VALLEJO ARAGON", "especialidad": "ATENCION PRIMARIA", "centro": "EAP DOCTOR CARLES RIBAS", "ciudad": "BARCELONA", "direccion": "EAP DOCTOR CARLES RIBAS, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-31", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "YUDIT SOSA JIMENEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP DOCTOR CARLES RIBAS", "ciudad": "BARCELONA", "direccion": "EAP DOCTOR CARLES RIBAS, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-31", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ALEKSANDRA MAS-STACHURSKA", "especialidad": "CARDIOLOGÍA", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-23", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "CARLA LORENA BLANCO AMIL", "especialidad": "CIRUGÍA VASCULAR", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-06-05", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "EDUARD GUASCH CASANY", "especialidad": "CARDIOLOGÍA", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-23", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "ESTELA BEATRIZ RODRIGUEZ", "especialidad": "CARDIOLOGÍA", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-07-13", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "INES MARTINEZ SALUDES", "especialidad": "CARDIOLOGÍA", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-06-11", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "IRENE BORRAS BELLART", "especialidad": "MEDICINA INTERNA", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "FORMATO_2, ESTADO"}, {"nombre": "JAUME ELIAS MINGOT", "especialidad": "CIRUGÍA VASCULAR", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-21", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "JESUS AIBAR GALLIZO", "especialidad": "MEDICINA INTERNA", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-07-16", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "JOSE MARIA CASAN CAVA", "especialidad": "CARDIOLOGÍA", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-07-30", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "LILLIAM LUCIA FLORES MENESES", "especialidad": "ENDOCRINOLOGÍA", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": 2.0, "ultimaVisita": "2026-06-16", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "MARIA SANZ DE LA GARZA", "especialidad": "CARDIOLOGÍA", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-16", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "PASTORA RODRIGUEZ FRAGA", "especialidad": "CARDIOLOGÍA", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-31", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "RUT ANDREA RIBA", "especialidad": "CARDIOLOGÍA", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": 2.0, "ultimaVisita": "2026-06-30", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "SALVATORE BRUGALETTA", "especialidad": "CARDIOLOGÍA", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": 4.0, "realizadas": 4.0, "ultimaVisita": "2026-07-31", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "VICENTE RIAMBAU ALONSO", "especialidad": "CIRUGÍA VASCULAR", "centro": "HOSP. CLINIC I PROVINCIAL DE BARCELONA", "ciudad": "BARCELONA", "direccion": "C/ Villarroel, 170, 08036 Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-06-05", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "LAURA TUNEU VALLS", "especialidad": "ENDOCRINOLOGÍA", "centro": "HOSP. UNIVERSITARI SAGRAT COR", "ciudad": "BARCELONA", "direccion": "C/ Viladomat, 288, 08029 Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-06-26", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "GINO FERNANDO ZAMORA ALARCON", "especialidad": "CIRUGÍA VASCULAR", "centro": "SAGRAT COR", "ciudad": "BARCELONA", "direccion": "C/ Viladomat, 288, 08029 Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": 2.0, "ultimaVisita": "2026-06-04", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "MARIA ISABEL SOTELO ALVA", "especialidad": "HEMATOLOGÍA", "centro": "SAGRAT COR", "ciudad": "BARCELONA", "direccion": "C/ Viladomat, 288, 08029 Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-14", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "MARICEL SUBIRA CASELLES", "especialidad": "HEMATOLOGÍA", "centro": "SAGRAT COR", "ciudad": "BARCELONA", "direccion": "C/ Viladomat, 288, 08029 Barcelona", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-14", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "JAVIER CABOT DURAN", "especialidad": "CIRUGÍA VASCULAR", "centro": "SERV. C. EXT. CIRUGIA VASCULAR", "ciudad": "BARCELONA", "direccion": "SERV. C. EXT. CIRUGIA VASCULAR, BARCELONA, España", "correo": "xavier.cabot@hospitalplato.com", "grado": "B", "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "ESTEBAN POCH LOPEZ DE BRIÑAS", "especialidad": "NEFROLOGÍA", "centro": "SERV. C. EXT. NEFROLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. C. EXT. NEFROLOGIA, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 2.0, "realizadas": 2.0, "ultimaVisita": "2026-06-16", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JOSE JESUS BROSETA MONZO", "especialidad": "NEFROLOGÍA", "centro": "SERV. C. EXT. NEFROLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. C. EXT. NEFROLOGIA, BARCELONA, España", "correo": "jjbroseta@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ADELINA DOLTRA MAGAROLAS", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "adoltra@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANA GARCIA ALVAREZ", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "anagarci@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANDREA ARENAS LORIENTE", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 1.0, "realizadas": 2.0, "ultimaVisita": "2026-06-04", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANGELA RODRIGUEZ EGUREN", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "arodrigueze@clinic.cat", "grado": "C", "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-06-08", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANNA MALLOL KIRCHNER", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "amallolk@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANTONIO MARTINEZ GUISADO", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 4.0, "realizadas": 3.0, "ultimaVisita": "2026-07-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CARLES FALCES SALVADOR", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "cfalces@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CAROLINA PAJUELO RIOS", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "pajuelo@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-28", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CYNTHIA PAOLA PAREDES PAUCAR", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "cpaola.paredes@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "EDUARD SOLE GONZALEZ", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "edsole@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 4.0, "ultimaVisita": "2026-07-16", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ENZO JAVIER ALDERETE PARISI", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "ERWIN BECHTOLD JAVIER", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "bechtold@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "EVA MORENO MONTERDE", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-06-08", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "GERARD PEREZ DOMENECH", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "GUILLEM BALAGUE DOBON", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "gbalague@clinic.cat", "grado": "C", "objetivo": 1.0, "realizadas": 2.0, "ultimaVisita": "2026-07-07", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "IÑIGO ANDUAGA ELORZA", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "ianduaga@clinic.cat", "grado": "A", "objetivo": 4.0, "realizadas": 3.0, "ultimaVisita": "2026-07-16", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JOAN GUZMAN BOFARULL", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-13", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JOSE CRISTOBAL DIAZ VILLANUEVA", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "josediazvillanueva@gmail.com", "grado": "A", "objetivo": 4.0, "realizadas": 3.0, "ultimaVisita": "2026-07-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JUAN JOSE RODRIGUEZ ARIAS", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "jjrodriguez@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 4.0, "ultimaVisita": "2026-06-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JUAN ROBERTO PERAIRA MORAL", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "robertoperaira2010@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-29", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARC BRUSOSA BAULENAS", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "marc.brusosa@gmail.com", "grado": "A", "objetivo": 4.0, "realizadas": 3.0, "ultimaVisita": "2026-07-17", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA ANGELES CASTEL LAVILLA", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "macastel@clinic.cat", "grado": "C", "objetivo": 1.0, "realizadas": 2.0, "ultimaVisita": "2026-07-07", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA CRISTINA VEHI GASOL", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "cvehi@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-28", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA MERCE ROQUE MORENO", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "mroque@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-06-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARTA FARRERO TORRES", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "mfarrero@clinic.cat", "grado": "C", "objetivo": 1.0, "realizadas": 2.0, "ultimaVisita": "2026-07-07", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "NICOLAS MANITO LORITE", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "nml@bellvitgehospital.cat", "grado": "B", "objetivo": 3.0, "realizadas": 4.0, "ultimaVisita": "2026-07-29", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ORIOL VENTOSA BLAZQUEZ", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "oriolventosa99@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-06-11", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SUSANA PRAT GONZALEZ", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "suprat@clinic.cat", "grado": "A", "objetivo": 4.0, "realizadas": 3.0, "ultimaVisita": "2026-07-28", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "TERESA LOPEZ SOBRINO", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. CARDIOLOGIA, BARCELONA, España", "correo": "telopez@clinic.cat", "grado": "A", "objetivo": 4.0, "realizadas": 3.0, "ultimaVisita": "2026-05-27", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ROMINA PENA LOPEZ", "especialidad": "PROCTOLOGÍA", "centro": "SERV. CIRUGIA GASTROINTESTINAL", "ciudad": "BARCELONA", "direccion": "SERV. CIRUGIA GASTROINTESTINAL, BARCELONA, España", "correo": "pena@clinic.cat", "grado": "C", "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-06-04", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ENCARNACION BALLESTA HUERTAS", "especialidad": "PROCTOLOGÍA", "centro": "SERV. CIRUGIA GENERAL", "ciudad": "BARCELONA", "direccion": "SERV. CIRUGIA GENERAL, BARCELONA, España", "correo": "eballesta@quironsalut.es", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-21", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SARA ANDREIA TAVARES NOGUEIRA", "especialidad": "PROCTOLOGÍA", "centro": "SERV. CIRUGIA GENERAL", "ciudad": "BARCELONA", "direccion": "SERV. CIRUGIA GENERAL, BARCELONA, España", "correo": "tavares@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-31", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "BEGOÑA ESTADELLA RIU", "especialidad": "CIRUGÍA VASCULAR", "centro": "SERV. CIRUGIA VASCULAR", "ciudad": "BARCELONA", "direccion": "SERV. CIRUGIA VASCULAR, BARCELONA, España", "correo": "ferrest4@gmail.com", "grado": "C", "objetivo": 1.0, "realizadas": 2.0, "ultimaVisita": "2026-06-04", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CESAR GARCIA MADRID", "especialidad": "CIRUGÍA VASCULAR", "centro": "SERV. CIRUGIA VASCULAR", "ciudad": "BARCELONA", "direccion": "SERV. CIRUGIA VASCULAR, BARCELONA, España", "correo": "cgarciam@clinic.cat", "grado": "C", "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-05-20", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "DANIEL GIL SALA", "especialidad": "CIRUGÍA VASCULAR", "centro": "SERV. CIRUGIA VASCULAR", "ciudad": "BARCELONA", "direccion": "SERV. CIRUGIA VASCULAR, BARCELONA, España", "correo": "dgil@vhebron.net", "grado": "C", "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-06-05", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "EDUARD CASAJUANA URGELL", "especialidad": "CIRUGÍA VASCULAR", "centro": "SERV. CIRUGIA VASCULAR", "ciudad": "BARCELONA", "direccion": "SERV. CIRUGIA VASCULAR, BARCELONA, España", "correo": "ecasajuana@clinic.cat", "grado": "C", "objetivo": 1.0, "realizadas": 2.0, "ultimaVisita": "2026-06-05", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "GASPAR MESTRES ALOMAR", "especialidad": "CIRUGÍA VASCULAR", "centro": "SERV. CIRUGIA VASCULAR", "ciudad": "BARCELONA", "direccion": "SERV. CIRUGIA VASCULAR, BARCELONA, España", "correo": "gmestres@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-31", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "GEMMA ARNEDO VALERO", "especialidad": "CIRUGÍA VASCULAR", "centro": "SERV. CIRUGIA VASCULAR", "ciudad": "BARCELONA", "direccion": "SERV. CIRUGIA VASCULAR, BARCELONA, España", "correo": "gemma260179@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JAVIER YUGUEROS CASTELLNOU", "especialidad": "CIRUGÍA VASCULAR", "centro": "SERV. CIRUGIA VASCULAR", "ciudad": "BARCELONA", "direccion": "SERV. CIRUGIA VASCULAR, BARCELONA, España", "correo": "yugueros@clinic.cat", "grado": "C", "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-06-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANTONIO JESUS AMOR FERNANDEZ", "especialidad": "ENDOCRINOLOGÍA", "centro": "SERV. ENDOCRINOLOGIA Y NUTRICION", "ciudad": "BARCELONA", "direccion": "SERV. ENDOCRINOLOGIA Y NUTRICION, BARCELONA, España", "correo": "ajamor@clinic.cat", "grado": "C", "objetivo": null, "realizadas": 2.0, "ultimaVisita": "2026-06-16", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "LUIS ALBERTO SZESCIELINSKI YUDYCKI", "especialidad": "CARDIOLOGÍA", "centro": "SERV. ESPECIALIDADES", "ciudad": "BARCELONA", "direccion": "SERV. ESPECIALIDADES, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CONSTANZA ANDREA SEPULVEDA GALLARDO", "especialidad": "MEDICINA INTERNA", "centro": "SERV. GERIATRIA", "ciudad": "BARCELONA", "direccion": "SERV. GERIATRIA, BARCELONA, España", "correo": "csepulveda@clinic.cat", "grado": "D", "objetivo": 1.0, "realizadas": 2.0, "ultimaVisita": "2026-06-05", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "DAVID NICOLAS OCEJO", "especialidad": "MEDICINA INTERNA", "centro": "SERV. HOSPITALIZACION DOMICILIARIA", "ciudad": "BARCELONA", "direccion": "SERV. HOSPITALIZACION DOMICILIARIA, BARCELONA, España", "correo": null, "grado": "D", "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-07-10", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JOSE ARMANDO GRANADOS MOZ", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. MEDICINA FAMILIAR", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA FAMILIAR, BARCELONA, España", "correo": null, "grado": "D", "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-06-25", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANA LOZANO MIÑANA", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": "alozano@hscor.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-06-04", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANGELO MARIO PECORELLI", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": "angelopecorelli@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANNA ALDEA PARES", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "CARLOS SALAS MORA", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CRISTINA SIERRA BENITO", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": "csierra@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "DANIEL NICOLAS MARCO PRATS", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "EMMANUEL COLOMA BAZAN", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": "emmanuelcoloma@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JORGE DELAS AMAT", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": "jdelas@ub.edu", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "LUCIA COCARO GALLART", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": null, "grado": "A", "objetivo": 4.0, "realizadas": 3.0, "ultimaVisita": "2026-07-21", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARC MONTOYA RODES", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 1.0, "realizadas": 2.0, "ultimaVisita": "2026-06-11", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA CARMEN PLANES OLIVES", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": "c_planes@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-06-25", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA ORTIZ RODRIGUEZ", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 1.0, "realizadas": 2.0, "ultimaVisita": "2026-06-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA ROSA COLL COLELL", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": "mcoll@quironsalud.es", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-16", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA SANCHEZ TORRES", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-07-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARTINA PELLICE ARIÑO", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "MERCEDES CLEMENTE PRESAS", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": "merclemente@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MIGUEL CAMAFORT BABKOWSKI", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": "miguel.camafort@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-21", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "PABLO ECHEVARRIA DIEZ-CANEDO", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-22", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "PAMELA INES DOTI", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": "pidoti@clinic.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-23", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "PERE MEDINA MARTI", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-07-09", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ROSARIO SALAS CAMPOS", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "BARCELONA", "direccion": "SERV. MEDICINA INTERNA, BARCELONA, España", "correo": "rsalas@quironsalud.es", "grado": "C", "objetivo": 1.0, "realizadas": 2.0, "ultimaVisita": "2026-06-26", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "DIANA MARIA RODRIGUEZ ESPINOZA", "especialidad": "NEFROLOGÍA", "centro": "SERV. NEFROLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. NEFROLOGIA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 3.0, "ultimaVisita": "2026-07-15", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ELENA CUADRADO PAYAN", "especialidad": "NEFROLOGÍA", "centro": "SERV. NEFROLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. NEFROLOGIA, BARCELONA, España", "correo": "ecuadrado@clinic.cat", "grado": "C", "objetivo": 2.0, "realizadas": 4.0, "ultimaVisita": "2026-07-03", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANTONIO DONCEL-MORIANO CUBERO", "especialidad": "NEUROLOGÍA", "centro": "SERV. NEUROLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. NEUROLOGIA, BARCELONA, España", "correo": "doncel-moria@clinic.cat", "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "ARTURO RENU JORNET", "especialidad": "NEUROLOGÍA", "centro": "SERV. NEUROLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. NEUROLOGIA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "DARIO JAVIEZ RAMIS MONFORT", "especialidad": "NEUROLOGÍA", "centro": "SERV. NEUROLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. NEUROLOGIA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "DAVID MORALEJA RODRIGUEZ", "especialidad": "NEUROLOGÍA", "centro": "SERV. NEUROLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. NEUROLOGIA, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "SERGIO AMARO DELGADO", "especialidad": "NEUROLOGÍA", "centro": "SERV. NEUROLOGIA", "ciudad": "BARCELONA", "direccion": "SERV. NEUROLOGIA, BARCELONA, España", "correo": "samaro@clinic.cat", "grado": "D", "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-05-15", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ALFONSO RENE AVILA CALVO", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. URGENCIAS", "ciudad": "BARCELONA", "direccion": "SERV. URGENCIAS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-30", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CARLA BOIXEDA SERRA", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. URGENCIAS", "ciudad": "BARCELONA", "direccion": "SERV. URGENCIAS, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-30", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "DENISSE LISSET CARPIO CHARRES", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. URGENCIAS", "ciudad": "BARCELONA", "direccion": "SERV. URGENCIAS, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "GIOVANNA BENEDETTI", "especialidad": "MEDICINA INTERNA", "centro": "SERV. URGENCIAS", "ciudad": "BARCELONA", "direccion": "SERV. URGENCIAS, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 2.0, "ultimaVisita": "2026-08-04", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "LUISA FERNANDA VASQUEZ MARIN", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. URGENCIAS", "ciudad": "BARCELONA", "direccion": "SERV. URGENCIAS, BARCELONA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-07-06", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "NAILA CANADELL MARCOS", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. URGENCIAS", "ciudad": "BARCELONA", "direccion": "SERV. URGENCIAS, BARCELONA, España", "correo": null, "grado": "D", "objetivo": 1.0, "realizadas": 2.0, "ultimaVisita": "2026-06-09", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "NATALIJA DEMIDENOKA", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. URGENCIAS", "ciudad": "BARCELONA", "direccion": "SERV. URGENCIAS, BARCELONA, España", "correo": "natalia.demidenok@gmail.com", "grado": "C", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-06", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "RICARDO MIGUEL BELISARIO BERRIOS", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. URGENCIAS", "ciudad": "BARCELONA", "direccion": "SERV. URGENCIAS, BARCELONA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-30", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SAMIR TUMA MAROKY", "especialidad": "CARDIOLOGÍA", "centro": "SERV. URGENCIAS", "ciudad": "BARCELONA", "direccion": "SERV. URGENCIAS, BARCELONA, España", "correo": "samirtuma@yahoo.es", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-16", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SARA JOHANNA OCHOA GUEVARA", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. URGENCIAS", "ciudad": "BARCELONA", "direccion": "SERV. URGENCIAS, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-29", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SUSANA VALIENTE HERNANDEZ", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. URGENCIAS", "ciudad": "BARCELONA", "direccion": "SERV. URGENCIAS, BARCELONA, España", "correo": null, "grado": "D", "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-06-05", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ORIOL DE DIEGO SOLER", "especialidad": "CARDIOLOGÍA", "centro": "UCCA", "ciudad": "BARCELONA", "direccion": "UCCA, BARCELONA, España", "correo": "dediego@clinic.cat", "grado": "A", "objetivo": 4.0, "realizadas": 4.0, "ultimaVisita": "2026-07-30", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JOAQUIN RAMON FERNANDEZ SOLA", "especialidad": "MEDICINA INTERNA", "centro": "UNIDAD FATIGA CRONICA", "ciudad": "BARCELONA", "direccion": "UNIDAD FATIGA CRONICA, BARCELONA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-08-04", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "PEDRO JOAQUIN CARAVACA PEREZ", "especialidad": "CARDIOLOGÍA", "centro": "UNIDAD INSUFICIENCIA CARDIACA", "ciudad": "BARCELONA", "direccion": "UNIDAD INSUFICIENCIA CARDIACA, BARCELONA, España", "correo": "pecarav86@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-06-30", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MONICA DOMENECH FERIA-CAROT", "especialidad": "MEDICINA INTERNA", "centro": "UNIDAD LIPIDOS", "ciudad": "BARCELONA", "direccion": "UNIDAD LIPIDOS, BARCELONA, España", "correo": "mdomen@clinic.cat", "grado": "A", "objetivo": 4.0, "realizadas": 3.0, "ultimaVisita": "2026-08-04", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ARMANDO RAMIREZ WILCHES", "especialidad": "ATENCION PRIMARIA", "centro": "CAP ESPARREGUERA", "ciudad": "ESPARREGUERA", "direccion": "CAP ESPARREGUERA, ESPARREGUERA, España", "correo": "armandoramirez369@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-15", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "DIANA LIZETH PACHECO ERAZO", "especialidad": "ATENCION PRIMARIA", "centro": "CAP ESPARREGUERA", "ciudad": "ESPARREGUERA", "direccion": "CAP ESPARREGUERA, ESPARREGUERA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-15", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "EDNA MARIELLA CAMA MEZA", "especialidad": "ATENCION PRIMARIA", "centro": "CAP ESPARREGUERA", "ciudad": "ESPARREGUERA", "direccion": "CAP ESPARREGUERA, ESPARREGUERA, España", "correo": "mariellacama@hotmail.com", "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-15", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ENRIC PUJOL BONASTRE", "especialidad": "ATENCION PRIMARIA", "centro": "CAP ESPARREGUERA", "ciudad": "ESPARREGUERA", "direccion": "CAP ESPARREGUERA, ESPARREGUERA, España", "correo": "centremediccontrol@gmail.com", "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-15", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "EVER SADICK VARELA ZELAYA", "especialidad": "ATENCION PRIMARIA", "centro": "CAP ESPARREGUERA", "ciudad": "ESPARREGUERA", "direccion": "CAP ESPARREGUERA, ESPARREGUERA, España", "correo": "eversadick@gmail.com", "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-15", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ISHAQ IMADEDDINE TIFOUR", "especialidad": "ATENCION PRIMARIA", "centro": "CAP ESPARREGUERA", "ciudad": "ESPARREGUERA", "direccion": "CAP ESPARREGUERA, ESPARREGUERA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-15", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JOSE LUIS MARTINEZ MARTINEZ", "especialidad": "ATENCION PRIMARIA", "centro": "CAP ESPARREGUERA", "ciudad": "ESPARREGUERA", "direccion": "CAP ESPARREGUERA, ESPARREGUERA, España", "correo": "odena1971@gmail.com", "grado": "A", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-29", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "LAURA NAVARRO HUERTAS", "especialidad": "ATENCION PRIMARIA", "centro": "CAP ESPARREGUERA", "ciudad": "ESPARREGUERA", "direccion": "CAP ESPARREGUERA, ESPARREGUERA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-15", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MOHAMED AYMEN KECHIDA", "especialidad": "ATENCION PRIMARIA", "centro": "CAP ESPARREGUERA", "ciudad": "ESPARREGUERA", "direccion": "CAP ESPARREGUERA, ESPARREGUERA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-29", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MOKHAMED BALOUS", "especialidad": "ATENCION PRIMARIA", "centro": "CAP ESPARREGUERA", "ciudad": "ESPARREGUERA", "direccion": "CAP ESPARREGUERA, ESPARREGUERA, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-10", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "VANESSA LEON REL", "especialidad": "ATENCION PRIMARIA", "centro": "CAP ESPARREGUERA", "ciudad": "ESPARREGUERA", "direccion": "CAP ESPARREGUERA, ESPARREGUERA, España", "correo": "zetantxa10@hotmail.com", "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-29", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "DENISE GISELLE MOYA GODOY", "especialidad": "CARDIOLOGÍA", "centro": "CTRE. MED. ESPLUGUES", "ciudad": "ESPLUGUES DE LLOBREGAT", "direccion": "CTRE. MED. ESPLUGUES, ESPLUGUES DE LLOBREGAT, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-13", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "DANIEL ALEJANDRO MENDEZ BELTRAN", "especialidad": "URGENCIAS", "centro": "SERV. URGENCIAS", "ciudad": "GRANOLLERS", "direccion": "SERV. URGENCIAS, GRANOLLERS, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "BRIGITTE SILVANA ALARCON JIMENEZ", "especialidad": "ATENCION PRIMARIA", "centro": "EAP CENTRE", "ciudad": "L'HOSPITALET DE LLOBREGAT", "direccion": "EAP CENTRE, L'HOSPITALET DE LLOBREGAT, España", "correo": "briyit.saj@gmail.com", "grado": null, "objetivo": null, "realizadas": 2.0, "ultimaVisita": "2026-06-26", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CATHERINE SUSAN TIMANA CRUZ", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. URGENCIAS", "ciudad": "L'HOSPITALET DE LLOBREGAT", "direccion": "SERV. URGENCIAS, L'HOSPITALET DE LLOBREGAT, España", "correo": "casuti_20@hotmail.com", "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-08-04", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JULIANA GOMEZ RAIGOSA", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. URGENCIAS", "ciudad": "L'HOSPITALET DE LLOBREGAT", "direccion": "SERV. URGENCIAS, L'HOSPITALET DE LLOBREGAT, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-15", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARCOS ANDRES ESCALIER TELLO", "especialidad": null, "centro": "SERV. URGENCIAS", "ciudad": "MADRID", "direccion": "SERV. URGENCIAS, MADRID, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "AITOR GARGALLO PEIRO", "especialidad": "ATENCION PRIMARIA", "centro": "CAP MARTORELL", "ciudad": "MARTORELL", "direccion": "CAP MARTORELL, MARTORELL, España", "correo": "agargallo@ambitcp.cat", "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "BELEN HENARES SANCHEZ", "especialidad": "ATENCION PRIMARIA", "centro": "CAP MARTORELL", "ciudad": "MARTORELL", "direccion": "CAP MARTORELL, MARTORELL, España", "correo": "bhenares.co.ics@gencat.cat", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-21", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CARMEN MARIA JIMENEZ JIMENEZ", "especialidad": "ATENCION PRIMARIA", "centro": "CAP MARTORELL", "ciudad": "MARTORELL", "direccion": "CAP MARTORELL, MARTORELL, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "CAROLINA RUBIO JOVANI", "especialidad": "ATENCION PRIMARIA", "centro": "CAP MARTORELL", "ciudad": "MARTORELL", "direccion": "CAP MARTORELL, MARTORELL, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "ERICA GEORGINA PELLISA DE LAZZARI", "especialidad": "ATENCION PRIMARIA", "centro": "CAP MARTORELL", "ciudad": "MARTORELL", "direccion": "CAP MARTORELL, MARTORELL, España", "correo": "georgina.pellisa@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-24", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "FRANCISCO JAVIER MOLINERO SARDA", "especialidad": "ATENCION PRIMARIA", "centro": "CAP MARTORELL", "ciudad": "MARTORELL", "direccion": "CAP MARTORELL, MARTORELL, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-21", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA ISABEL FUENTES LEIVA", "especialidad": "ATENCION PRIMARIA", "centro": "CAP MARTORELL", "ciudad": "MARTORELL", "direccion": "CAP MARTORELL, MARTORELL, España", "correo": "ifuentes.cp.ics@gencat.cat", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-14", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MONTSERRAT PRATS JULIA", "especialidad": "ATENCION PRIMARIA", "centro": "CAP MARTORELL", "ciudad": "MARTORELL", "direccion": "CAP MARTORELL, MARTORELL, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-24", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "NEUS PEREZ MANYA", "especialidad": "ATENCION PRIMARIA", "centro": "CAP MARTORELL", "ciudad": "MARTORELL", "direccion": "CAP MARTORELL, MARTORELL, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "SONIA CONSUELO GRANADO CORZO", "especialidad": "ATENCION PRIMARIA", "centro": "CAP MARTORELL", "ciudad": "MARTORELL", "direccion": "CAP MARTORELL, MARTORELL, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-21", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "TERESA BADIA FARRE", "especialidad": "ATENCION PRIMARIA", "centro": "CAP MARTORELL", "ciudad": "MARTORELL", "direccion": "CAP MARTORELL, MARTORELL, España", "correo": "tbadia.cap.ics@gencat.cat", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-08", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "VANESA ANDREA SAVIOLA", "especialidad": "ATENCION PRIMARIA", "centro": "CAP MARTORELL", "ciudad": "MARTORELL", "direccion": "CAP MARTORELL, MARTORELL, España", "correo": "vanesasaviola77@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-06-26", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SEBASTIAN ALBERTO PAZ", "especialidad": "CARDIOLOGÍA", "centro": "CMI ESPARRAGUERA", "ciudad": "MARTORELL", "direccion": "CMI ESPARRAGUERA, MARTORELL, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-24", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANNA GENER VIÑAS", "especialidad": "ATENCION PRIMARIA", "centro": "CONS. MARTORELL VILA", "ciudad": "MARTORELL", "direccion": "CONS. MARTORELL VILA, MARTORELL, España", "correo": "annagevi@hotmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-08", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ADRIANA SOTO PRIORE", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "MARTORELL", "direccion": "SERV. CARDIOLOGIA, MARTORELL, España", "correo": "asotopriore@hotmail.com", "grado": "A", "objetivo": 4.0, "realizadas": 4.0, "ultimaVisita": "2026-07-07", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "EDUARDO FERRER ALEMAN", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "MARTORELL", "direccion": "SERV. CARDIOLOGIA, MARTORELL, España", "correo": "consultacardiologiacaac@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-24", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA YSABEL SALDARRIAGA INFANTE", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "MARTORELL", "direccion": "SERV. CARDIOLOGIA, MARTORELL, España", "correo": "maritaysaldarriaga@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-06-15", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "YOEL ISAAC TUYA ACOSTA", "especialidad": "CARDIOLOGÍA", "centro": "SERV. CARDIOLOGIA", "ciudad": "MARTORELL", "direccion": "SERV. CARDIOLOGIA, MARTORELL, España", "correo": "isaactuya76@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 4.0, "ultimaVisita": "2026-07-08", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SARA GARCIA PELEGRI", "especialidad": "CIRUGÍA VASCULAR", "centro": "SERV. CIRUGIA VASCULAR", "ciudad": "MARTORELL", "direccion": "SERV. CIRUGIA VASCULAR, MARTORELL, España", "correo": "saragap@hotmail.com", "grado": "C", "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-06-29", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JOAQUIN RIPOLLES EDO", "especialidad": "MEDICINA INTERNA", "centro": "SERV. ENDOCRINOLOGIA", "ciudad": "MARTORELL", "direccion": "SERV. ENDOCRINOLOGIA, MARTORELL, España", "correo": "28461jre@comb.cat", "grado": "A", "objetivo": 4.0, "realizadas": 3.0, "ultimaVisita": "2026-07-21", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "KESIA GRANELA CORTIÑAS", "especialidad": "MEDICINA INTERNA", "centro": "SERV. ENDOCRINOLOGIA", "ciudad": "MARTORELL", "direccion": "SERV. ENDOCRINOLOGIA, MARTORELL, España", "correo": "kesiagranela1978@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-14", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "NURIA CALCERRADA LABRADOR", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "MARTORELL", "direccion": "SERV. MEDICINA INTERNA, MARTORELL, España", "correo": "nuriacalcerrada@hotmail.com", "grado": "A", "objetivo": 4.0, "realizadas": 4.0, "ultimaVisita": "2026-07-14", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SALVANY VALLE HERNANDEZ RAMIREZ", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "MARTORELL", "direccion": "SERV. MEDICINA INTERNA, MARTORELL, España", "correo": "svhernandez@hmartorell.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-14", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "YOLANDA PRETEL RODRIGUEZ", "especialidad": "MEDICINA INTERNA", "centro": "SERV. MEDICINA INTERNA", "ciudad": "MARTORELL", "direccion": "SERV. MEDICINA INTERNA, MARTORELL, España", "correo": "ypretel@mutuaterrassa.cat", "grado": "A", "objetivo": 4.0, "realizadas": 4.0, "ultimaVisita": "2026-07-24", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SILVIA CUSO GARCIA", "especialidad": "NEUROLOGÍA", "centro": "SERV. NEUROLOGIA", "ciudad": "MARTORELL", "direccion": "SERV. NEUROLOGIA, MARTORELL, España", "correo": "scuso@hmartorell.cat", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-14", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "LIGDON HOMERO PARRAGA CALDERON", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. URGENCIAS", "ciudad": "MARTORELL", "direccion": "SERV. URGENCIAS, MARTORELL, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 2.0, "ultimaVisita": "2026-05-13", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "VICENTE BARRAGAN FLORES", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. URGENCIAS", "ciudad": "MARTORELL", "direccion": "SERV. URGENCIAS, MARTORELL, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-06-05", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CARLOS JULIO CORTES", "especialidad": "ATENCION PRIMARIA", "centro": "CAP OLESA DE MONTSERRAT", "ciudad": "OLESA DE MONTSERRAT", "direccion": "CAP OLESA DE MONTSERRAT, OLESA DE MONTSERRAT, España", "correo": null, "grado": "D", "objetivo": 1.0, "realizadas": 1.0, "ultimaVisita": "2026-07-29", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CAROLINA ARIAS JARAMILLO", "especialidad": "ATENCION PRIMARIA", "centro": "CAP OLESA DE MONTSERRAT", "ciudad": "OLESA DE MONTSERRAT", "direccion": "CAP OLESA DE MONTSERRAT, OLESA DE MONTSERRAT, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-06-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "DANEIRI GARCIA SANTOS", "especialidad": "ATENCION PRIMARIA", "centro": "CAP OLESA DE MONTSERRAT", "ciudad": "OLESA DE MONTSERRAT", "direccion": "CAP OLESA DE MONTSERRAT, OLESA DE MONTSERRAT, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-29", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA PILAR SOLE LARA", "especialidad": "ATENCION PRIMARIA", "centro": "CAP OLESA DE MONTSERRAT", "ciudad": "OLESA DE MONTSERRAT", "direccion": "CAP OLESA DE MONTSERRAT, OLESA DE MONTSERRAT, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-29", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARTA GARCIA PASTOR", "especialidad": "ATENCION PRIMARIA", "centro": "CAP OLESA DE MONTSERRAT", "ciudad": "OLESA DE MONTSERRAT", "direccion": "CAP OLESA DE MONTSERRAT, OLESA DE MONTSERRAT, España", "correo": "martagarcia@mutuaterrassa.es", "grado": "B", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-06-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MIRIAM MARTINEZ GARCIA", "especialidad": "ATENCION PRIMARIA", "centro": "CAP OLESA DE MONTSERRAT", "ciudad": "OLESA DE MONTSERRAT", "direccion": "CAP OLESA DE MONTSERRAT, OLESA DE MONTSERRAT, España", "correo": "miriammartinez@mutuaterrassa.es", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-29", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SADY ZULEMA MONSALVE MONSALVE", "especialidad": "ATENCION PRIMARIA", "centro": "CAP OLESA DE MONTSERRAT", "ciudad": "OLESA DE MONTSERRAT", "direccion": "CAP OLESA DE MONTSERRAT, OLESA DE MONTSERRAT, España", "correo": null, "grado": "B", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-06-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SARA BARAHONA LERENA", "especialidad": "ATENCION PRIMARIA", "centro": "CAP OLESA DE MONTSERRAT", "ciudad": "OLESA DE MONTSERRAT", "direccion": "CAP OLESA DE MONTSERRAT, OLESA DE MONTSERRAT, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 1.0, "ultimaVisita": "2026-06-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "SILVIA FONT UREÑA", "especialidad": "ATENCION PRIMARIA", "centro": "CAP OLESA DE MONTSERRAT", "ciudad": "OLESA DE MONTSERRAT", "direccion": "CAP OLESA DE MONTSERRAT, OLESA DE MONTSERRAT, España", "correo": "sfont@mutuaterrassa.es", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-29", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ALBERTO MARTIN VALLE VILLANUEVA", "especialidad": "CARDIOLOGÍA", "centro": "GRUPO CMI", "ciudad": "OLESA DE MONTSERRAT", "direccion": "GRUPO CMI, OLESA DE MONTSERRAT, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-07-24", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CAROLINA RANGEL FALCON", "especialidad": "ATENCION PRIMARIA", "centro": "SOU CERDANYOLA RIPOLLET", "ciudad": "RIPOLLET", "direccion": "SOU CERDANYOLA RIPOLLET, RIPOLLET, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-06-01", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ALBERT GONZALEZ SAGREDO", "especialidad": "CIRUGÍA VASCULAR", "centro": "SERV. CIRUGIA VASCULAR", "ciudad": "SABADELL", "direccion": "SERV. CIRUGIA VASCULAR, SABADELL, España", "correo": "albertgonzalezsagredo@gmail.com", "grado": "D", "objetivo": 1.0, "realizadas": 2.0, "ultimaVisita": "2026-06-26", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "JUAN SALVADOR MIRANDA VARGAS", "especialidad": "ATENCION PRIMARIA", "centro": "SERV. URGENCIAS", "ciudad": "SABADELL", "direccion": "SERV. URGENCIAS, SABADELL, España", "correo": "jsmirandav@tauli.cat", "grado": "C", "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-18", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ANNA PERARNAU GELABERT", "especialidad": "ATENCION PRIMARIA", "centro": "CAP LA SOLANA", "ciudad": "SANT ANDREU DE LA BARCA", "direccion": "CAP LA SOLANA, SANT ANDREU DE LA BARCA, España", "correo": "aperarnau.apms.ics@gencat.cat", "grado": "C", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ASTRID TITO EUDAL", "especialidad": "ATENCION PRIMARIA", "centro": "CAP LA SOLANA", "ciudad": "SANT ANDREU DE LA BARCA", "direccion": "CAP LA SOLANA, SANT ANDREU DE LA BARCA, España", "correo": null, "grado": "A", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "AURORA CARMEN GIL NIEVES", "especialidad": "ATENCION PRIMARIA", "centro": "CAP LA SOLANA", "ciudad": "SANT ANDREU DE LA BARCA", "direccion": "CAP LA SOLANA, SANT ANDREU DE LA BARCA, España", "correo": "agil@ambitcp.catsalut.net", "grado": "A", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "CRISTINA NARANJO SUAREZ", "especialidad": "ATENCION PRIMARIA", "centro": "CAP LA SOLANA", "ciudad": "SANT ANDREU DE LA BARCA", "direccion": "CAP LA SOLANA, SANT ANDREU DE LA BARCA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ARANNIE STIVAN AMBROSIO", "especialidad": "ATENCION PRIMARIA", "centro": "CAP SANT ANDREU DE LA BARCA", "ciudad": "SANT ANDREU DE LA BARCA", "direccion": "CAP SANT ANDREU DE LA BARCA, SANT ANDREU DE LA BARCA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": 2.0, "ultimaVisita": "2026-07-24", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ATANASI MATA NAVARRO", "especialidad": "ATENCION PRIMARIA", "centro": "CAP SANT ANDREU DE LA BARCA", "ciudad": "SANT ANDREU DE LA BARCA", "direccion": "CAP SANT ANDREU DE LA BARCA, SANT ANDREU DE LA BARCA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-24", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "DANIEL MENENDEZ PEREZ", "especialidad": "ATENCION PRIMARIA", "centro": "CAP SANT ANDREU DE LA BARCA", "ciudad": "SANT ANDREU DE LA BARCA", "direccion": "CAP SANT ANDREU DE LA BARCA, SANT ANDREU DE LA BARCA, España", "correo": null, "grado": null, "objetivo": null, "realizadas": null, "ultimaVisita": null, "fuente": "CALL_PLAN"}, {"nombre": "FEDERICO TORRES QUISPE", "especialidad": "ATENCION PRIMARIA", "centro": "CAP SANT ANDREU DE LA BARCA", "ciudad": "SANT ANDREU DE LA BARCA", "direccion": "CAP SANT ANDREU DE LA BARCA, SANT ANDREU DE LA BARCA, España", "correo": "fedetq@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-24", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "GABRIELA MARIA AUCEDA FLORES", "especialidad": "ATENCION PRIMARIA", "centro": "CAP SANT ANDREU DE LA BARCA", "ciudad": "SANT ANDREU DE LA BARCA", "direccion": "CAP SANT ANDREU DE LA BARCA, SANT ANDREU DE LA BARCA, España", "correo": null, "grado": "C", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-24", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "MARIA MAR DELGADO CARRION", "especialidad": "ATENCION PRIMARIA", "centro": "CAP SANT ANDREU DE LA BARCA", "ciudad": "SANT ANDREU DE LA BARCA", "direccion": "CAP SANT ANDREU DE LA BARCA, SANT ANDREU DE LA BARCA, España", "correo": "mmdelcar@gmail.com", "grado": "B", "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-24", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "ROGER QUINTANILLA CASTILLO", "especialidad": "ATENCION PRIMARIA", "centro": "CAP SANT ANDREU DE LA BARCA", "ciudad": "SANT ANDREU DE LA BARCA", "direccion": "CAP SANT ANDREU DE LA BARCA, SANT ANDREU DE LA BARCA, España", "correo": "roger_rqc@hotmail.com", "grado": "A", "objetivo": 3.0, "realizadas": 2.0, "ultimaVisita": "2026-07-24", "fuente": "CALL_PLAN, FORMATO_2, ESTADO"}, {"nombre": "EILYN MARIA ALEMAN FERNANDEZ", "especialidad": "ATENCION PRIMARIA", "centro": null, "ciudad": null, "direccion": null, "correo": null, "grado": null, "objetivo": null, "realizadas": 2.0, "ultimaVisita": "2026-06-15", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "ESTER SENAR ABELLAN", "especialidad": "ATENCION PRIMARIA", "centro": null, "ciudad": null, "direccion": null, "correo": null, "grado": null, "objetivo": 3.0, "realizadas": 3.0, "ultimaVisita": "2026-07-23", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "FERNANDA CAROLINA ESCUDERO SALDAÑA", "especialidad": "ATENCION PRIMARIA", "centro": null, "ciudad": null, "direccion": null, "correo": null, "grado": null, "objetivo": null, "realizadas": 2.0, "ultimaVisita": "2026-07-09", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "GEMMA MARTINEZ NADAL", "especialidad": "ATENCION PRIMARIA", "centro": null, "ciudad": null, "direccion": null, "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-06-08", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "GEMMA MORERA VILLA- REAL", "especialidad": "ATENCION PRIMARIA", "centro": null, "ciudad": null, "direccion": null, "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-07-10", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "JAVIER BUENAVENT ALCALDE PONTAQUE", "especialidad": "ATENCION PRIMARIA", "centro": null, "ciudad": null, "direccion": null, "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-05-21", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "MARIA ANTONIETA ALSO FONTANET", "especialidad": "ATENCION PRIMARIA", "centro": null, "ciudad": null, "direccion": null, "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-07-06", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "MARIA TERESA BENET GUSTA", "especialidad": "ATENCION PRIMARIA", "centro": null, "ciudad": null, "direccion": null, "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-06-09", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "MARTA RIBAS FABREGA", "especialidad": "ATENCION PRIMARIA", "centro": null, "ciudad": null, "direccion": null, "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-06-04", "fuente": "FORMATO_2, ESTADO"}, {"nombre": "SUSANA GARCIA MARTIN", "especialidad": "ATENCION PRIMARIA", "centro": null, "ciudad": null, "direccion": null, "correo": null, "grado": null, "objetivo": 3.0, "realizadas": null, "ultimaVisita": null, "fuente": "FORMATO_2, ESTADO"}, {"nombre": "YOLANDA PIAZUELO ALONSO", "especialidad": "ATENCION PRIMARIA", "centro": null, "ciudad": null, "direccion": null, "correo": null, "grado": null, "objetivo": null, "realizadas": 1.0, "ultimaVisita": "2026-07-01", "fuente": "FORMATO_2, ESTADO"}];
+
+const CYCLE_END = "2026-09-30";
+
+/* ======================= ESTADO Y CLAVES DE STORAGE ======================= */
+const K_DIR="servier-directorio-v2", K_VIS="servier-visitas", K_MAIL="servier-emails", K_ACC="servier-acciones", K_CFG="servier-config-v2", K_APLAZ="servier-aplazamientos";
+let directorio={centros:[],medicos:[]};
+let visitas=[]; let emails=[]; let acciones=[];
+let aplazamientos=[]; // lista de medicoId cuya próxima visita planificada se ha aplazado a más adelante
+let config={dias:[false,true,true,true,true,true,false], visitasPorDia:8, importado:false};
+let registroTipo="visita";
+let historialFiltro="todo";
+let ultimoPlanCalendario=[]; // último calendario calculado, para poder consultarlo desde Historial
+
+const DIAS_NOMBRE=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+const DIAS_NOMBRE_LARGO=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function hoyISO(){ return fechaToISO(new Date()); }
+function escapeHtml(str){ const d=document.createElement("div"); d.textContent=str||""; return d.innerHTML; }
+function formatFecha(iso){ if(!iso) return "—"; const [y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; }
+function toDate(iso){ const [y,m,d]=iso.split("-").map(Number); return new Date(y, m-1, d); }
+function toastMsg(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.classList.add("show");
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer=setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+function normKey(s){
+  return (s||"").toString().trim().toUpperCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/\s+/g," ");
+}
+
+function inferTipoCentro(nombre){
+  const n=(nombre||"").toUpperCase();
+  if(n.startsWith("HOSP") || n.includes("HOSPITAL") || n.startsWith("SERV.") || n.includes("CLINIC ") || n==="HOSP. CLINIC I PROVINCIAL DE BARCELONA") return "Hospital";
+  if(n.startsWith("CAP ") || n.startsWith("EAP ") || n.includes("CUAP")) return "CAP";
+  if(n.includes("CLINICA") || n.includes("CLÍNICA") || n.includes("CONSULTA") || n.includes("ASISTENCIA")) return "Privada";
+  if(n.includes("FARMACIA")) return "Farmacia";
+  return "Otro";
+}
+
+/* ======================= CARGA / GUARDADO ======================= */
+// Almacenamiento híbrido y resistente a fallos:
+// intenta window.storage (Claude) primero, pero SIEMPRE hace copia de
+// seguridad en localStorage y usa esa copia si window.storage falla.
+const usaClaudeStorage = (typeof window!=="undefined" && window.storage && typeof window.storage.get==="function");
+let claudeStorageOk = usaClaudeStorage; // se pone en false en cuanto falla una vez, para dejar de insistir
+
+function localGet(key){ try{ return localStorage.getItem(key); }catch(e){ return null; } }
+function localSet(key,value){ try{ localStorage.setItem(key,value); }catch(e){} }
+
+async function storageGet(key){
+  if(claudeStorageOk){
+    try{
+      const r = await window.storage.get(key,false);
+      const val = r ? r.value : null;
+      if(val!==null) localSet(key,val); // mantener la copia local al día
+      return val;
+    }catch(e){
+      console.warn("Fallo leyendo de window.storage, usando localStorage:", e.message||e);
+      claudeStorageOk = false;
+    }
+  }
+  return localGet(key);
+}
+async function storageSet(key,value){
+  localSet(key,value); // copia de seguridad local siempre, pase lo que pase
+  if(claudeStorageOk){
+    try{
+      await window.storage.set(key, value, false);
+    }catch(e){
+      console.warn("Fallo guardando en window.storage, se quedó guardado en localStorage:", e.message||e);
+      claudeStorageOk = false;
+    }
+  }
+}
+
+async function cargarTodo(){
+  try{ const v = await storageGet(K_DIR); directorio = v?JSON.parse(v):{centros:[],medicos:[]}; }catch(e){ directorio={centros:[],medicos:[]}; }
+  try{ const v = await storageGet(K_VIS); visitas = v?JSON.parse(v):[]; }catch(e){ visitas=[]; }
+  try{ const v = await storageGet(K_MAIL); emails = v?JSON.parse(v):[]; }catch(e){ emails=[]; }
+  try{ const v = await storageGet(K_ACC); acciones = v?JSON.parse(v):[]; }catch(e){ acciones=[]; }
+  try{ const v = await storageGet(K_APLAZ); aplazamientos = v?JSON.parse(v):[]; }catch(e){ aplazamientos=[]; }
+  try{ const v = await storageGet(K_CFG); config = v?JSON.parse(v):config; }catch(e){}
+
+  if(!config.importado){
+    importarSemilla();
+    config.importado = true;
+    await guardar(K_CFG, config);
+    await guardar(K_DIR, directorio);
+  }
+  renderTodo();
+}
+async function guardar(key,data){ try{ await storageSet(key, JSON.stringify(data)); }catch(e){ console.error("No se pudo guardar",e); } }
+
+/* ======================= IMPORTAR / ACTUALIZAR DESDE CALL PLAN ======================= */
+function upsertCentro(nombre, ciudad){
+  if(!nombre) return null;
+  const key = normKey(nombre);
+  let centro = directorio.centros.find(c=>normKey(c.nombre)===key);
+  if(!centro){
+    centro = { id:uid(), nombre, tipo:inferTipoCentro(nombre), zona: ciudad || "" };
+    directorio.centros.push(centro);
+  } else if(ciudad && !centro.zona){
+    centro.zona = ciudad;
+  }
+  return centro;
+}
+
+function importarSemilla(){
+  let nuevos=0, actualizados=0;
+  SEED_MEDICOS.forEach(r=>{
+    if(!r.nombre) return;
+    const centro = upsertCentro(r.centro, r.ciudad);
+    const key = normKey(r.nombre);
+    let medico = directorio.medicos.find(m=>normKey(m.nombre)===key);
+    const datos = {
+      nombre: r.nombre,
+      centroId: centro ? centro.id : (medico?medico.centroId:null),
+      especialidad: r.especialidad || (medico?medico.especialidad:""),
+      objetivo: (r.objetivo===null||r.objetivo===undefined) ? null : Math.round(r.objetivo),
+      realizadas: r.realizadas===null||r.realizadas===undefined ? 0 : Math.round(r.realizadas),
+      ultimaVisitaImportada: r.ultimaVisita || null,
+      correo: r.correo || "",
+      grado: r.grado || "",
+      direccion: r.direccion || "",
+      fuente: r.fuente || ""
+    };
+    if(medico){
+      Object.assign(medico, datos);
+      actualizados++;
+    } else {
+      directorio.medicos.push({ id:uid(), creado:hoyISO(), ...datos });
+      nuevos++;
+    }
+  });
+  return {nuevos, actualizados};
+}
+
+document.getElementById("fileExcel").addEventListener("change", async (e)=>{
+  const file = e.target.files[0];
+  const statusEl = document.getElementById("excelStatus");
+  if(!file) return;
+  if(typeof XLSX === "undefined"){
+    statusEl.textContent = "No se ha podido cargar el lector de Excel (sin conexión). Prueba de nuevo con internet disponible.";
+    return;
+  }
+  statusEl.textContent = "Leyendo archivo...";
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, {type:"array", cellDates:true});
+    const sheetName = wb.SheetNames.includes("Call Plan Unificado") ? "Call Plan Unificado" : wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, {defval:null});
+
+    const parsed = rows.map(row=>{
+      const nombre = row["Nombre y Apellidos"];
+      if(!nombre) return null;
+      let ultima = row["Última visita (F2F)"];
+      if(ultima instanceof Date) ultima = ultima.toISOString().slice(0,10);
+      return {
+        nombre: String(nombre).trim(),
+        especialidad: row["Especialidad"] || "",
+        centro: row["Centro / Cuenta"] || null,
+        ciudad: row["Ciudad"] || null,
+        direccion: row["Dirección aproximada (para geocodificar)"] || "",
+        correo: row["Correo electrónico"] || "",
+        grado: row["Grado equipo (A-D)"] || "",
+        objetivo: (row["Objetivo visitas (trimestre)"]===null||row["Objetivo visitas (trimestre)"]===undefined||row["Objetivo visitas (trimestre)"]==="") ? null : Number(row["Objetivo visitas (trimestre)"]),
+        realizadas: (row["Visitas realizadas"]===null||row["Visitas realizadas"]===undefined||row["Visitas realizadas"]==="") ? 0 : Number(row["Visitas realizadas"]),
+        ultimaVisita: ultima || null,
+        fuente: row["Fuentes (fichero origen)"] || ""
+      };
+    }).filter(Boolean);
+
+    if(parsed.length===0){
+      statusEl.textContent = "No se han encontrado filas de médicos reconocibles en ese archivo.";
+      return;
+    }
+
+    let nuevos=0, actualizados=0;
+    parsed.forEach(r=>{
+      const centro = upsertCentro(r.centro, r.ciudad);
+      const key = normKey(r.nombre);
+      let medico = directorio.medicos.find(m=>normKey(m.nombre)===key);
+      const datos = {
+        nombre: r.nombre,
+        centroId: centro ? centro.id : (medico?medico.centroId:null),
+        especialidad: r.especialidad || (medico?medico.especialidad:""),
+        objetivo: (r.objetivo===null||isNaN(r.objetivo)) ? null : Math.round(r.objetivo),
+        realizadas: (r.realizadas===null||isNaN(r.realizadas)) ? 0 : Math.round(r.realizadas),
+        ultimaVisitaImportada: r.ultimaVisita || null,
+        correo: r.correo || "",
+        grado: r.grado || "",
+        direccion: r.direccion || "",
+        fuente: r.fuente || ""
+      };
+      if(medico){ Object.assign(medico, datos); actualizados++; }
+      else{ directorio.medicos.push({ id:uid(), creado:hoyISO(), ...datos }); nuevos++; }
+    });
+
+    await guardar(K_DIR, directorio);
+    statusEl.textContent = `Listo: ${nuevos} médico(s) nuevo(s), ${actualizados} actualizado(s).`;
+    toastMsg("Directorio actualizado desde Excel");
+    e.target.value = "";
+    renderTodo();
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "No se ha podido leer ese archivo. Comprueba que sea el Excel exportado (Call Plan Unificado).";
+  }
+});
+
+/* ======================= TABS ======================= */
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("view-"+tab.dataset.view).classList.add("active");
+    renderTodo();
+  });
+});
+
+/* ======================= CÁLCULOS DE MÉDICO ======================= */
+function visitasLoggedDe(medicoId){
+  return visitas.filter(v=>v.medicoId===medicoId).length;
+}
+function totalVisitasDe(m){
+  return (m.realizadas||0) + visitasLoggedDe(m.id);
+}
+function pendientesDe(m){
+  if(m.objetivo===null || m.objetivo===undefined) return null;
+  return Math.max(0, m.objetivo - totalVisitasDe(m));
+}
+function estadoMedico(m){
+  const pend = pendientesDe(m);
+  if(pend===null) return {texto:"Sin frecuencia", badgeClass:"badge-none", pend:null};
+  if(pend===0) return {texto:"Completado", badgeClass:"badge-ok", pend:0};
+  return {texto:`${pend} pendiente${pend>1?"s":""}`, badgeClass:"badge-soon", pend};
+}
+function nombreCentro(centroId){
+  const c = directorio.centros.find(c=>c.id===centroId);
+  return c ? c.nombre : "";
+}
+function ciudadDe(m){
+  const c = directorio.centros.find(c=>c.id===m.centroId);
+  return c ? (c.zona||"") : "";
+}
+
+/* ======================= DIRECTORIO ======================= */
+document.getElementById("addCentro").addEventListener("click", async ()=>{
+  const nombre=document.getElementById("nuevoCentroNombre").value.trim();
+  if(!nombre) return;
+  directorio.centros.push({
+    id:uid(), nombre,
+    tipo:document.getElementById("nuevoCentroTipo").value,
+    zona:document.getElementById("nuevoCentroZona").value.trim()
+  });
+  await guardar(K_DIR, directorio);
+  document.getElementById("nuevoCentroNombre").value="";
+  document.getElementById("nuevoCentroZona").value="";
+  toastMsg("Centro añadido");
+  renderTodo();
+});
+
+document.getElementById("addMedico").addEventListener("click", async ()=>{
+  const nombre=document.getElementById("nuevoMedicoNombre").value.trim();
+  const centroId=document.getElementById("nuevoMedicoCentro").value;
+  if(!nombre || !centroId) return;
+  const objVal = document.getElementById("nuevoMedicoObjetivo").value;
+  directorio.medicos.push({
+    id:uid(), nombre, centroId,
+    especialidad:document.getElementById("nuevoMedicoEspecialidad").value.trim(),
+    objetivo: objVal==="" ? null : parseInt(objVal),
+    realizadas: parseInt(document.getElementById("nuevoMedicoRealizadas").value)||0,
+    ultimaVisitaImportada:null, correo:"", grado:"", direccion:"", fuente:"Añadido manualmente",
+    creado: hoyISO()
+  });
+  await guardar(K_DIR, directorio);
+  document.getElementById("nuevoMedicoNombre").value="";
+  document.getElementById("nuevoMedicoEspecialidad").value="";
+  document.getElementById("nuevoMedicoObjetivo").value="";
+  document.getElementById("nuevoMedicoRealizadas").value="0";
+  toastMsg("Médico añadido");
+  renderTodo();
+});
+
+function poblarSelectCentros(){
+  const sel=document.getElementById("nuevoMedicoCentro");
+  const prev = sel.value;
+  const ordenados = [...directorio.centros].sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  sel.innerHTML = ordenados.length
+    ? ordenados.map(c=>`<option value="${c.id}">${escapeHtml(c.nombre)}${c.zona?" · "+escapeHtml(c.zona):""}</option>`).join("")
+    : `<option value="">Añade un centro primero</option>`;
+  if(prev && ordenados.some(c=>c.id===prev)) sel.value = prev;
+}
+
+function renderDirectorio(){
+  const q=(document.getElementById("buscarDirectorio").value||"").trim().toLowerCase();
+  const cont=document.getElementById("listaDirectorio");
+  document.getElementById("totalDirectorio").textContent = directorio.medicos.length ? `· ${directorio.medicos.length} médicos` : "";
+
+  if(directorio.centros.length===0){
+    cont.innerHTML = `<div class="empty-hint">Todavía no has añadido ningún centro. Empieza arriba, o actualiza desde Excel.</div>`;
+    return;
+  }
+  let html="";
+  const centrosOrdenados = [...directorio.centros].sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  centrosOrdenados.forEach(centro=>{
+    let meds = directorio.medicos.filter(m=>m.centroId===centro.id);
+    if(q){
+      const matchCentro = centro.nombre.toLowerCase().includes(q) || (centro.zona||"").toLowerCase().includes(q);
+      meds = matchCentro ? meds : meds.filter(m=>m.nombre.toLowerCase().includes(q) || (m.especialidad||"").toLowerCase().includes(q));
+      if(!matchCentro && meds.length===0) return;
+    }
+    if(meds.length===0 && q) return;
+    html += `<div class="center-group">
+      <div class="center-head">
+        <span class="center-name">${escapeHtml(centro.nombre)} <span class="center-type">· ${centro.tipo}${centro.zona?" · "+escapeHtml(centro.zona):""}</span></span>
+        <button class="del-btn" data-del-centro="${centro.id}">✕</button>
+      </div>`;
+    if(meds.length===0){
+      html += `<div class="empty-hint" style="padding:4px 0;">Sin médicos añadidos aquí.</div>`;
+    }
+    meds.sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(m=>{
+      const est = estadoMedico(m);
+      html += `<div class="doc-row">
+        <div class="doc-info">
+          <div class="doc-name">${escapeHtml(m.nombre)}</div>
+          <div class="doc-meta">${escapeHtml(m.especialidad||"—")}${m.objetivo!=null?` · objetivo ${totalVisitasDe(m)}/${m.objetivo}`:""} · <span class="badge ${est.badgeClass}">${est.texto}</span></div>
+        </div>
+        <button class="del-btn" data-del-medico="${m.id}">✕</button>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  cont.innerHTML = html || `<div class="empty-hint">Sin resultados.</div>`;
+
+  cont.querySelectorAll("[data-del-centro]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const id=btn.dataset.delCentro;
+      if(!confirm("¿Eliminar este centro y todos sus médicos?")) return;
+      directorio.centros = directorio.centros.filter(c=>c.id!==id);
+      directorio.medicos = directorio.medicos.filter(m=>m.centroId!==id);
+      await guardar(K_DIR, directorio);
+      renderTodo();
+    });
+  });
+  cont.querySelectorAll("[data-del-medico]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      directorio.medicos = directorio.medicos.filter(m=>m.id!==btn.dataset.delMedico);
+      await guardar(K_DIR, directorio);
+      renderTodo();
+    });
+  });
+}
+document.getElementById("buscarDirectorio").addEventListener("input", renderDirectorio);
+
+/* ======================= CALENDARIO DEL CICLO ======================= */
+function renderDiasConfig(){
+  const cont=document.getElementById("diasConfig");
+  cont.innerHTML="";
+  for(let i=0;i<7;i++){
+    const chip=document.createElement("div");
+    chip.className="daychk"+(config.dias[i]?" on":"");
+    chip.textContent=DIAS_NOMBRE[i];
+    chip.addEventListener("click", async ()=>{
+      config.dias[i]=!config.dias[i];
+      await guardar(K_CFG, config);
+      renderTodo();
+    });
+    cont.appendChild(chip);
+  }
+}
+document.getElementById("visitasPorDia").addEventListener("change", async (e)=>{
+  config.visitasPorDia = Math.max(1, parseInt(e.target.value)||1);
+  await guardar(K_CFG, config);
+  renderTodo();
+});
+
+function diasLaborablesHasta(fechaFinISO){
+  const start = toDate(hoyISO()); // incluye HOY en el reparto, no solo a partir de mañana
+  const end = toDate(fechaFinISO);
+  const dias_ = [];
+  let cursor = new Date(start);
+  let safety=0;
+  while(cursor <= end && safety<600){
+    safety++;
+    if(config.dias[cursor.getDay()]) dias_.push(new Date(cursor));
+    cursor.setDate(cursor.getDate()+1);
+  }
+  return dias_;
+}
+
+function fechaToISO(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function inicioSemanaActual(){
+  const hoy = toDate(hoyISO());
+  const dow = hoy.getDay(); // 0=domingo, 1=lunes...
+  const offset = dow===0 ? 6 : dow-1; // días desde el lunes
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate()-offset);
+  return lunes;
+}
+
+function diasHistoricosSemana(){
+  // desde el lunes de esta semana hasta AYER (hoy ya se muestra en el plan,
+  // con lo pendiente de verdad para hoy, no solo lo ya registrado)
+  const hoy = toDate(hoyISO());
+  const cursor = inicioSemanaActual();
+  const dias_ = [];
+  let safety=0;
+  while(cursor < hoy && safety<8){
+    safety++;
+    const fechaISO = fechaToISO(cursor);
+    const visitasDia = visitas.filter(v=>v.fecha===fechaISO);
+    const emailsDia = emails.filter(e=>e.fecha===fechaISO);
+    dias_.push({fecha:new Date(cursor), fechaISO, visitasDia, emailsDia, esHoy:false});
+    cursor.setDate(cursor.getDate()+1);
+  }
+  return dias_;
+}
+
+function construirSlotsPendientes(){
+  const conPend = directorio.medicos
+    .map(m=>({m, pend:pendientesDe(m)}))
+    .filter(x=>x.pend!==null && x.pend>0);
+
+  // 1. agrupar por especialidad; dentro de cada especialidad, repartir en
+  //    round-robin por médico para separar las visitas de un mismo médico
+  const porEspecialidad = {};
+  conPend.forEach(x=>{
+    const esp = x.m.especialidad || "Sin especialidad";
+    if(!porEspecialidad[esp]) porEspecialidad[esp] = [];
+    porEspecialidad[esp].push({m:x.m, pend:x.pend});
+  });
+
+  const colas = Object.values(porEspecialidad).map(arr=>{
+    let restante = arr.map(x=>({...x}));
+    const cola=[];
+    let safety=0;
+    while(restante.some(x=>x.pend>0) && safety<5000){
+      safety++;
+      for(const x of restante){
+        if(x.pend>0){ cola.push(x.m); x.pend--; }
+      }
+    }
+    return cola;
+  });
+
+  // 2. intercalar entre especialidades (round-robin) para que cada día
+  //    combine el máximo número posible de especialidades distintas
+  const slots=[];
+  const punteros = colas.map(()=>0);
+  let quedan=true, safety2=0;
+  while(quedan && safety2<20000){
+    safety2++;
+    quedan=false;
+    colas.forEach((cola,i)=>{
+      if(punteros[i] < cola.length){
+        slots.push(cola[punteros[i]]);
+        punteros[i]++;
+        if(punteros[i] < cola.length) quedan = true;
+      }
+    });
+  }
+
+  // 3. aplicar aplazamientos: la visita se empuja al final de la cola
+  //    (queda para uno de los últimos días disponibles) y el resto del
+  //    calendario se recoloca automáticamente para llenar el hueco
+  aplazamientos.forEach(medicoId=>{
+    const idx = slots.findIndex(m=>m.id===medicoId);
+    if(idx>-1){
+      const [m] = slots.splice(idx,1);
+      slots.push(m);
+    }
+  });
+
+  return slots;
+}
+
+function limpiarAplazamientos(){
+  // descarta aplazamientos de médicos ya completados, o repetidos más
+  // veces de las visitas pendientes que realmente tienen
+  const contador = {};
+  aplazamientos = aplazamientos.filter(medicoId=>{
+    const m = directorio.medicos.find(x=>x.id===medicoId);
+    if(!m) return false;
+    const pend = pendientesDe(m);
+    if(!pend || pend<=0) return false;
+    contador[medicoId] = (contador[medicoId]||0)+1;
+    return contador[medicoId] <= pend;
+  });
+}
+
+async function registrarVisitaRapida(medicoId){
+  const m = directorio.medicos.find(x=>x.id===medicoId);
+  if(!m) return;
+  visitas.push({
+    id:uid(), tipo:"visita", medicoId, fecha:hoyISO(),
+    interes:"Medio", productos:[], muestras:false, seguimiento:false,
+    notas:"Registrada con doble toque desde Calendario"
+  });
+  await guardar(K_VIS, visitas);
+  toastMsg(`Visita registrada: ${m.nombre}`);
+  renderTodo();
+}
+
+async function desregistrarDesdeCalendario(compuesto){
+  const [tipo, id] = compuesto.split(":");
+  if(tipo==="visita"){
+    const v = visitas.find(x=>x.id===id);
+    visitas = visitas.filter(x=>x.id!==id);
+    await guardar(K_VIS, visitas);
+    toastMsg(v ? `Visita de ${nombreMedico(v.medicoId)} eliminada` : "Visita eliminada");
+  } else if(tipo==="email"){
+    const e = emails.find(x=>x.id===id);
+    emails = emails.filter(x=>x.id!==id);
+    await guardar(K_MAIL, emails);
+    toastMsg(e ? `Email de ${nombreMedico(e.medicoId)} eliminado` : "Email eliminado");
+  }
+  renderTodo();
+}
+
+function renderCalendario(){
+  document.getElementById("visitasPorDia").value = config.visitasPorDia;
+  renderDiasConfig();
+  limpiarAplazamientos();
+
+  const conObjetivo = directorio.medicos.filter(m=>m.objetivo!==null && m.objetivo!==undefined);
+  const completados = conObjetivo.filter(m=>pendientesDe(m)===0).length;
+  const pendMedicos = conObjetivo.length - completados;
+  const sumObjetivo = conObjetivo.reduce((s,m)=>s+m.objetivo,0);
+  const sumRealizadas = conObjetivo.reduce((s,m)=>s+Math.min(m.objetivo,totalVisitasDe(m)),0);
+
+  const hoy = hoyISO();
+  const finDate = toDate(CYCLE_END);
+  const diasRestantesCalendario = diasLaborablesHasta(CYCLE_END);
+
+  document.getElementById("cicloSub").textContent =
+    `El ciclo cierra el ${formatFecha(CYCLE_END)}. Hoy es ${formatFecha(hoy)}.`;
+  document.getElementById("cicloCompletados").textContent = `${completados}/${conObjetivo.length}`;
+  document.getElementById("cicloPendientesMed").textContent = pendMedicos;
+  document.getElementById("cicloDiasRest").textContent = diasRestantesCalendario.length;
+  document.getElementById("cicloVisitasLabel").textContent = `${sumRealizadas} / ${sumObjetivo}`;
+  document.getElementById("cicloBarFill").style.width = sumObjetivo>0 ? `${(sumRealizadas/sumObjetivo)*100}%` : "0%";
+
+  const slots = construirSlotsPendientes();
+  const totalSlots = slots.length;
+  const warnEl = document.getElementById("cicloWarning");
+  const listaEl = document.getElementById("calendarioLista");
+
+  // --- Bloque histórico: lunes de esta semana hasta hoy, con lo que REALMENTE
+  //     registraste ese día. Se muestra siempre, haya o no plan de días futuros ---
+  function htmlHistorico(){
+    const historicos = diasHistoricosSemana();
+    return historicos.map(d=>{
+      const nombreDia = DIAS_NOMBRE_LARGO[d.fecha.getDay()];
+      const fechaStr = `${String(d.fecha.getDate()).padStart(2,"0")}/${String(d.fecha.getMonth()+1).padStart(2,"0")}`;
+      const total = d.visitasDia.length + d.emailsDia.length;
+      const etiqueta = d.esHoy ? "HOY" : "REALIZADO";
+      let contenido;
+      if(total===0){
+        contenido = `<div class="empty-hint" style="padding:4px 0;">Sin visitas ni emails registrados este día.</div>`;
+      } else {
+        contenido = d.visitasDia.map(v=>`<div class="day-doc"><span class="day-doc-name">${escapeHtml(nombreMedico(v.medicoId))} <span class="center-type">Visita · ${escapeHtml(v.interes||"")}</span></span></div>`).join("")
+          + d.emailsDia.map(e=>`<div class="day-doc"><span class="day-doc-name">${escapeHtml(nombreMedico(e.medicoId))} <span class="center-type">Email</span></span></div>`).join("");
+      }
+      return `<div class="day-block">
+        <div class="day-head" style="color:var(--dim);"><span>${nombreDia} ${fechaStr} · <span style="font-size:10px; letter-spacing:.03em;">${etiqueta}</span></span><span>${total}</span></div>
+        ${contenido}
+      </div>`;
+    }).join("");
+  }
+
+  if(conObjetivo.length===0){
+    warnEl.innerHTML="";
+    listaEl.innerHTML = htmlHistorico() + `<div class="empty-hint">Ningún médico tiene todavía frecuencia de visita asignada, así que no hay nada que repartir en el calendario.</div>`;
+    ultimoPlanCalendario = [];
+    return;
+  }
+
+  if(totalSlots===0){
+    warnEl.innerHTML = `<div class="ok-banner">🎉 Ya has completado el 100% de los médicos con frecuencia asignada para este ciclo.</div>`;
+    listaEl.innerHTML = htmlHistorico() + `<div class="empty-hint">Nada pendiente que repartir.</div>`;
+    ultimoPlanCalendario = [];
+    return;
+  }
+
+  if(diasRestantesCalendario.length===0){
+    warnEl.innerHTML = `<div class="warn-banner">No queda ningún día laborable seleccionado antes del ${formatFecha(CYCLE_END)}. Marca al menos un día de trabajo arriba, o quedarán ${totalSlots} visita(s) sin repartir.</div>`;
+    listaEl.innerHTML = htmlHistorico();
+    ultimoPlanCalendario = [];
+    return;
+  }
+
+  const cap = config.visitasPorDia;
+  const promedioNecesario = totalSlots / diasRestantesCalendario.length;
+  const necesarioPorDia = Math.ceil(promedioNecesario);
+
+  let planDias, sobrantes=[];
+  if(cap >= necesarioPorDia){
+    // reparto uniforme: todo cabe dentro del cierre de ciclo
+    const base = Math.floor(totalSlots / diasRestantesCalendario.length);
+    const extra = totalSlots % diasRestantesCalendario.length;
+    let idx=0;
+    planDias = diasRestantesCalendario.map((d,i)=>{
+      const n = base + (i<extra?1:0);
+      const chunk = slots.slice(idx, idx+n);
+      idx+=n;
+      return {fecha:d, medicos:chunk};
+    });
+    warnEl.innerHTML = `<div class="ok-banner">A este ritmo (~${necesarioPorDia} visita${necesarioPorDia>1?"s":""}/día) completas el 100% antes del ${formatFecha(CYCLE_END)}.</div>`;
+  } else {
+    // el tope diario no da para llegar a tiempo: se llena cada día hasta el tope y el resto queda sin encaje
+    let idx=0;
+    planDias = diasRestantesCalendario.map(d=>{
+      const chunk = slots.slice(idx, idx+cap);
+      idx+=chunk.length;
+      return {fecha:d, medicos:chunk};
+    });
+    sobrantes = slots.slice(idx);
+    warnEl.innerHTML = `<div class="warn-banner">Con un tope de ${cap} visitas/día no llegas a completar el 100% antes del ${formatFecha(CYCLE_END)}: quedarían ${sobrantes.length} visita(s) sin día asignado. Sube el tope a ${necesarioPorDia}/día, o añade más días de trabajo.</div>`;
+  }
+
+  ultimoPlanCalendario = planDias;
+
+  const aplazarBtn = (m)=>`<button class="del-btn" data-aplazar="${m.id}" title="Aplazar esta visita a más adelante">✕</button>`;
+
+  let html = htmlHistorico();
+
+  if(aplazamientos.length>0){
+    html += `<button class="btn btn-sm btn-ghost" id="deshacerAplazamientos" style="margin-bottom:10px;">Deshacer aplazamientos (${aplazamientos.length})</button>`;
+  }
+
+  const hoyISOStr = hoyISO();
+  const visitasHoy = visitas.filter(v=>v.fecha===hoyISOStr);
+  const emailsHoy = emails.filter(e=>e.fecha===hoyISOStr);
+
+  html += planDias.map(d=>{
+    const esHoy = fechaToISO(d.fecha) === hoyISOStr;
+    const nombreDia = DIAS_NOMBRE_LARGO[d.fecha.getDay()];
+    const fechaStr = `${String(d.fecha.getDate()).padStart(2,"0")}/${String(d.fecha.getMonth()+1).padStart(2,"0")}`;
+    if(d.medicos.length===0 && !esHoy) return "";
+
+    const checkboxConfirmar = (m)=>`<div class="checkbox" data-confirmar="${m.id}" style="cursor:pointer; flex-shrink:0; margin-right:2px;" title="Marcar como visitado"><svg viewBox="0 0 12 10" fill="none"><path d="M1 5L4.5 8.5L11 1.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
+    const checkboxDesregistrar = (id)=>`<div class="checkbox" data-desregistrar="${id}" style="cursor:pointer; flex-shrink:0; margin-right:2px; background:var(--teal); border-color:var(--teal);" title="Desmarcar (por si te equivocaste)"><svg viewBox="0 0 12 10" fill="none" style="opacity:1;"><path d="M1 5L4.5 8.5L11 1.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
+
+    const yaHechoHoy = esHoy && (visitasHoy.length+emailsHoy.length>0)
+      ? `<div class="section-label" style="margin-top:0;">Ya registrado hoy</div>`
+        + `<p class="card-sub" style="margin:0 0 4px;">Toca la casilla verde si registraste algo por error.</p>`
+        + visitasHoy.map(v=>`<div class="day-doc" style="align-items:center;">${checkboxDesregistrar("visita:"+v.id)}<span class="day-doc-name">${escapeHtml(nombreMedico(v.medicoId))} <span class="center-type">Visita · ${escapeHtml(v.interes||"")}</span></span></div>`).join("")
+        + emailsHoy.map(e=>`<div class="day-doc" style="align-items:center;">${checkboxDesregistrar("email:"+e.id)}<span class="day-doc-name">${escapeHtml(nombreMedico(e.medicoId))} <span class="center-type">Email</span></span></div>`).join("")
+        + `<div class="section-label">Pendiente para hoy</div>`
+      : "";
+
+    const listaPendientes = d.medicos.length>0
+      ? (esHoy ? `<p class="card-sub" style="margin:0 0 4px;">Marca la casilla junto al nombre para registrar la visita.</p>` : "")
+        + d.medicos.map(m=>`<div class="day-doc" style="align-items:center;">${esHoy?checkboxConfirmar(m):""}<span class="day-doc-name">${escapeHtml(m.nombre)} <span class="center-type">${escapeHtml(m.especialidad||"")} · ${escapeHtml(nombreCentro(m.centroId))}</span></span>${aplazarBtn(m)}</div>`).join("")
+      : (esHoy ? `<div class="empty-hint" style="padding:4px 0;">Sin visitas pendientes asignadas para hoy.</div>` : "");
+
+    return `<div class="day-block">
+      <div class="day-head"><span>${nombreDia} ${fechaStr}${esHoy?` · <span style="font-size:10px; letter-spacing:.03em; color:var(--teal);">HOY</span>`:""}</span><span>${d.medicos.length}</span></div>
+      ${yaHechoHoy}${listaPendientes}
+    </div>`;
+  }).join("");
+
+  if(sobrantes.length>0){
+    html += `<div class="day-block">
+      <div class="day-head" style="color:var(--rose);"><span>Sin día asignado</span><span>${sobrantes.length}</span></div>
+      ${sobrantes.map(m=>`<div class="day-doc"><span class="day-doc-name">${escapeHtml(m.nombre)} <span class="center-type">${escapeHtml(m.especialidad||"")} · ${escapeHtml(nombreCentro(m.centroId))}</span></span></div>`).join("")}
+    </div>`;
+  }
+
+  listaEl.innerHTML = html;
+
+  listaEl.querySelectorAll("[data-confirmar]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(el.dataset.procesando) return; // evita doble disparo si tocan rápido varias veces
+      el.dataset.procesando = "1";
+      el.style.background = "var(--teal)";
+      el.style.borderColor = "var(--teal)";
+      const svg = el.querySelector("svg");
+      if(svg) svg.style.opacity = "1";
+      await registrarVisitaRapida(el.dataset.confirmar);
+    });
+  });
+
+  listaEl.querySelectorAll("[data-desregistrar]").forEach(el=>{
+    el.addEventListener("click", async ()=>{
+      if(el.dataset.procesando) return;
+      el.dataset.procesando = "1";
+      el.style.background = "";
+      el.style.borderColor = "";
+      const svg = el.querySelector("svg");
+      if(svg) svg.style.opacity = "0";
+      await desregistrarDesdeCalendario(el.dataset.desregistrar);
+    });
+  });
+
+  listaEl.querySelectorAll("[data-aplazar]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      aplazamientos.push(btn.dataset.aplazar);
+      await guardar(K_APLAZ, aplazamientos);
+      toastMsg("Visita aplazada, se recoloca más adelante");
+      renderTodo();
+    });
+  });
+  const deshacerBtn = document.getElementById("deshacerAplazamientos");
+  if(deshacerBtn){
+    deshacerBtn.addEventListener("click", async ()=>{
+      aplazamientos = [];
+      await guardar(K_APLAZ, aplazamientos);
+      toastMsg("Aplazamientos deshechos");
+      renderTodo();
+    });
+  }
+}
+
+/* ======================= REGISTRAR ======================= */
+document.querySelectorAll('[data-tipo]').forEach(opt=>{
+  opt.addEventListener("click", ()=>{
+    document.querySelectorAll('[data-tipo]').forEach(o=>o.classList.remove("active"));
+    opt.classList.add("active");
+    registroTipo = opt.dataset.tipo;
+    document.getElementById("camposVisita").style.display = registroTipo==="visita" ? "block" : "none";
+  });
+});
+
+function poblarSelectMedicosRegistro(){
+  const sel=document.getElementById("regMedico");
+  const hay = directorio.medicos.length>0;
+  document.getElementById("sinMedicos").style.display = hay ? "none" : "block";
+  document.getElementById("formRegistro").style.display = hay ? "block" : "none";
+  const q = (document.getElementById("buscarRegMedico").value||"").trim().toLowerCase();
+  const prev = sel.value;
+  let lista = [...directorio.medicos].sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  if(q) lista = lista.filter(m=>m.nombre.toLowerCase().includes(q) || nombreCentro(m.centroId).toLowerCase().includes(q));
+  sel.innerHTML = lista.map(m=>{
+    return `<option value="${m.id}">${escapeHtml(m.nombre)} — ${escapeHtml(nombreCentro(m.centroId))}</option>`;
+  }).join("");
+  if(prev && lista.some(m=>m.id===prev)) sel.value = prev;
+}
+document.getElementById("buscarRegMedico").addEventListener("input", poblarSelectMedicosRegistro);
+
+document.getElementById("chkMuestras").addEventListener("click", function(){ this.classList.toggle("checked"); });
+document.getElementById("chkSeguimiento").addEventListener("click", function(){ this.classList.toggle("checked"); });
+document.getElementById("regFecha").valueAsDate = new Date();
+
+document.getElementById("guardarRegistro").addEventListener("click", async ()=>{
+  const medicoId = document.getElementById("regMedico").value;
+  if(!medicoId) return;
+  const fecha = document.getElementById("regFecha").value || hoyISO();
+  const notas = document.getElementById("regNotas").value.trim();
+
+  if(registroTipo==="visita"){
+    visitas.push({
+      id:uid(), tipo:"visita", medicoId, fecha,
+      interes: document.getElementById("regInteres").value,
+      productos: document.getElementById("regProductos").value.split(",").map(p=>p.trim()).filter(Boolean),
+      muestras: document.getElementById("chkMuestras").classList.contains("checked"),
+      seguimiento: document.getElementById("chkSeguimiento").classList.contains("checked"),
+      notas
+    });
+    await guardar(K_VIS, visitas);
+  } else {
+    emails.push({ id:uid(), medicoId, fecha, notas });
+    await guardar(K_MAIL, emails);
+  }
+
+  document.getElementById("regProductos").value="";
+  document.getElementById("regNotas").value="";
+  document.getElementById("chkMuestras").classList.remove("checked");
+  document.getElementById("chkSeguimiento").classList.remove("checked");
+  document.getElementById("regFecha").valueAsDate = new Date();
+
+  toastMsg("Registro guardado");
+  renderTodo();
+});
+
+
+
+/* ======================= HISTORIAL ======================= */
+document.querySelectorAll('[data-filtro]').forEach(opt=>{
+  opt.addEventListener("click", ()=>{
+    document.querySelectorAll('[data-filtro]').forEach(o=>o.classList.remove("active"));
+    opt.classList.add("active");
+    historialFiltro = opt.dataset.filtro;
+    renderHistorial();
+  });
+});
+document.getElementById("buscarHistorialBtn").addEventListener("click", renderHistorial);
+document.getElementById("buscarHistorial").addEventListener("keydown", (e)=>{
+  if(e.key==="Enter") renderHistorial();
+});
+
+function nombreMedico(id){ const m=directorio.medicos.find(x=>x.id===id); return m?m.nombre:"Médico eliminado"; }
+
+function proximaVisitaProgramada(medicoId){
+  for(const dia of ultimoPlanCalendario){
+    if(dia.medicos.some(m=>m.id===medicoId)) return dia.fecha;
+  }
+  return null;
+}
+
+function renderResumenMedicoHistorial(q){
+  const el = document.getElementById("resumenHistorialMedico");
+  if(!q){ el.innerHTML = ""; return; }
+
+  const coincidencias = directorio.medicos.filter(m=>normKey(m.nombre).includes(normKey(q)));
+  if(coincidencias.length===0){
+    el.innerHTML = `<div class="empty-hint">Ningún médico coincide con "${escapeHtml(q)}".</div>`;
+    return;
+  }
+  if(coincidencias.length>1){
+    el.innerHTML = `<div class="empty-hint">${coincidencias.length} médicos coinciden con "${escapeHtml(q)}", afina el nombre y apellidos para ver su resumen.</div>`;
+    return;
+  }
+
+  const m = coincidencias[0];
+  const numVisitas = visitasLoggedDe(m.id);
+  const numEmails = emails.filter(e=>e.medicoId===m.id).length;
+  const est = estadoMedico(m);
+  const proxima = proximaVisitaProgramada(m.id);
+
+  el.innerHTML = `<div class="card" style="background:var(--bg); margin-top:10px; margin-bottom:0;">
+    <div class="doc-name" style="font-size:15px; margin-bottom:6px;">${escapeHtml(m.nombre)}</div>
+    <div class="doc-meta" style="margin-bottom:10px;">${escapeHtml(m.especialidad||"—")} · ${escapeHtml(nombreCentro(m.centroId))}</div>
+    <div class="stat-grid3">
+      <div><div class="stat-big" style="font-size:22px;">${numVisitas}</div><div class="stat-label">visitas</div></div>
+      <div><div class="stat-big" style="font-size:22px;">${numEmails}</div><div class="stat-label">emails</div></div>
+      <div><div class="stat-big" style="font-size:22px;"><span class="badge ${est.badgeClass}">${est.texto}</span></div><div class="stat-label">frecuencia del ciclo</div></div>
+    </div>
+    ${proxima ? `<p class="card-sub" style="margin-top:10px; margin-bottom:0;">Próxima visita programada en el calendario: <strong>${DIAS_NOMBRE_LARGO[proxima.getDay()]} ${String(proxima.getDate()).padStart(2,"0")}/${String(proxima.getMonth()+1).padStart(2,"0")}</strong></p>`
+      : (est.pend===null ? `<p class="card-sub" style="margin-top:10px; margin-bottom:0;">Sin frecuencia de visita asignada, no entra en el calendario.</p>`
+      : est.pend===0 ? `<p class="card-sub" style="margin-top:10px; margin-bottom:0;">Ya ha completado su objetivo de este ciclo.</p>`
+      : `<p class="card-sub" style="margin-top:10px; margin-bottom:0;">Aún no tiene día asignado en el calendario actual.</p>`)}
+  </div>`;
+}
+
+function renderHistorial(){
+  const q=(document.getElementById("buscarHistorial").value||"").trim();
+  renderResumenMedicoHistorial(q);
+  const qLower = q.toLowerCase();
+  let items = [
+    ...visitas.map(v=>({...v, tipo:"visita"})),
+    ...emails.map(e=>({...e, tipo:"email"}))
+  ];
+  if(historialFiltro!=="todo") items = items.filter(i=>i.tipo===historialFiltro);
+  items.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  if(qLower) items = items.filter(i=>nombreMedico(i.medicoId).toLowerCase().includes(qLower));
+
+  const cont=document.getElementById("listaHistorial");
+  if(items.length===0){ cont.innerHTML=`<div class="empty-hint">Sin resultados.</div>`; return; }
+
+  cont.innerHTML = items.map(i=>{
+    if(i.tipo==="visita"){
+      const badgeClass = i.interes==="Alto"?"badge-ok":i.interes==="Medio"?"badge-soon":"badge-late";
+      return `<div class="hist-item">
+        <div class="hist-top"><span class="hist-doc">${escapeHtml(nombreMedico(i.medicoId))}</span><span class="hist-date">${formatFecha(i.fecha)}</span></div>
+        <div class="hist-meta"><span class="badge ${badgeClass}">${i.interes}</span>${i.seguimiento?` <span class="badge badge-late">Seguimiento</span>`:""} ${escapeHtml((i.productos||[]).join(", "))}</div>
+        ${i.notas?`<div class="hist-notes">${escapeHtml(i.notas)}</div>`:""}
+      </div>`;
+    } else {
+      return `<div class="hist-item">
+        <div class="hist-top"><span class="hist-doc">${escapeHtml(nombreMedico(i.medicoId))}</span><span class="hist-date">${formatFecha(i.fecha)}</span></div>
+        <div class="hist-meta"><span class="badge badge-soon">Email</span></div>
+        ${i.notas?`<div class="hist-notes">${escapeHtml(i.notas)}</div>`:""}
+      </div>`;
+    }
+  }).join("");
+}
+
+/* ======================= STATS ======================= */
+function renderProgresoEspecialidad(){
+  const porEsp = {};
+  directorio.medicos.filter(m=>m.objetivo!==null && m.objetivo!==undefined).forEach(m=>{
+    const esp = m.especialidad || "Sin especialidad";
+    if(!porEsp[esp]) porEsp[esp] = {objetivo:0, realizadas:0};
+    porEsp[esp].objetivo += m.objetivo;
+    porEsp[esp].realizadas += Math.min(m.objetivo, totalVisitasDe(m));
+  });
+  const entries = Object.entries(porEsp).sort((a,b)=>b[1].objetivo-a[1].objetivo);
+  const el = document.getElementById("statProgresoEspecialidad");
+  if(entries.length===0){ el.innerHTML = `<div class="empty-hint">Aún no hay médicos con frecuencia asignada.</div>`; return; }
+  el.innerHTML = entries.map(([esp,d])=>{
+    const pct = d.objetivo>0 ? Math.min(100,(d.realizadas/d.objetivo)*100) : 0;
+    const completo = d.realizadas>=d.objetivo;
+    return `<div class="bar-row"><div class="bar-label"><span>${escapeHtml(esp)}</span><span>${d.realizadas}/${d.objetivo}</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${pct}%; ${completo?"background:var(--teal);":""}"></div></div></div>`;
+  }).join("");
+}
+
+function renderStats(){
+  renderProgresoEspecialidad();
+}
+
+/* ======================= REFRESCAR TODO ======================= */
+function renderTodo(){
+  poblarSelectCentros();
+  renderDirectorio();
+  poblarSelectMedicosRegistro();
+  renderCalendario();
+  renderHistorial();
+  renderStats();
+}
+
+cargarTodo();
+</script>
+</body>
+</html>
