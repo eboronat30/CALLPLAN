@@ -646,6 +646,12 @@ function notaDe(m){
 }
 const JUBILAN = new Set(["JOSE MIGUEL LLOVET LOMBARTE", "MARIA LUISA MORO ESTEBAN", "ANA LOZANO MIÑANA", "ROSARIO SALAS CAMPOS", "ADELINA DOLTRA MAGAROLAS"].map(normKey));
 function jubila(m){ return JUBILAN.has(normKey(m.nombre)); }
+// Días con agenda especial: ese día solo se proponen los médicos que cumplen la condición
+const FILTROS_DIA = {
+  "2026-10-27": {texto:"solo AP Barcelona", fn: m => normKey(m.especialidad)==="ATENCION PRIMARIA" && normKey(ciudadDe(m))==="BARCELONA" && /^(EAP|CAP) /.test(normKey(nombreCentro(m.centroId)))}
+};
+function filtroDia(fecha){ return FILTROS_DIA[fechaToISO(fecha)] || null; }
+function pasaFiltroDia(fecha, m){ const f = filtroDia(fecha); return !f || f.fn(m); }
 function reglaDe(m){ return REGLAS_NORM[normKey(m.nombre)] || null; }
 function textoRegla(m){
   const r = reglaDe(m); if(!r) return "";
@@ -1229,17 +1235,26 @@ function renderCalendario(){
   slots.forEach(m=>{
     const r = reglaDe(m);
     if(!r){ libres.push(m); return; }
-    const dia = planDias.find(d=>r.dias.includes(d.fecha.getDay()) && d.medicos.length<cap && !d.medicos.some(x=>x.id===m.id));
+    const dia = planDias.find(d=>r.dias.includes(d.fecha.getDay()) && d.medicos.length<cap && !d.medicos.some(x=>x.id===m.id) && pasaFiltroDia(d.fecha,m));
     if(dia) dia.medicos.push(m); else sobrantes.push(m);
   });
-  let li = 0;
-  planDias.forEach(d=>{
-    while(li<libres.length && d.medicos.length<objetivoDia){ d.medicos.push(libres[li]); li++; }
-  });
-  planDias.forEach(d=>{
-    while(li<libres.length && d.medicos.length<cap){ d.medicos.push(libres[li]); li++; }
-  });
-  sobrantes = sobrantes.concat(libres.slice(li));
+  // se recorre la cola en orden; los días con filtro especial solo cogen a quien lo cumple
+  const usado = new Array(libres.length).fill(false);
+  const llenar = (d, tope)=>{
+    // en un día con filtro se recorre agrupando por centro, para no ir saltando de CAP en CAP
+    const orden = libres.map((_,i)=>i);
+    if(filtroDia(d.fecha)) orden.sort((a,b)=>nombreCentro(libres[a].centroId).localeCompare(nombreCentro(libres[b].centroId)) || a-b);
+    for(const i of orden){
+      if(d.medicos.length>=tope) break;
+      if(usado[i]) continue;
+      const m = libres[i];
+      if(!pasaFiltroDia(d.fecha,m) || d.medicos.some(x=>x.id===m.id)) continue;
+      usado[i]=true; d.medicos.push(m);
+    }
+  };
+  planDias.forEach(d=>llenar(d, objetivoDia));
+  planDias.forEach(d=>llenar(d, cap));
+  sobrantes = sobrantes.concat(libres.filter((_,i)=>!usado[i]));
   // dentro de cada día: primero las citas con hora, por orden de hora
   planDias.forEach(d=>d.medicos.sort((a,b)=>{
     const ha=(reglaDe(a)||{}).hora||"99", hb=(reglaDe(b)||{}).hora||"99";
@@ -1288,7 +1303,7 @@ function renderCalendario(){
       : (esHoy ? `<div class="empty-hint" style="padding:4px 0;">Sin visitas pendientes asignadas para hoy.</div>` : "");
 
     return `<div class="day-block">
-      <div class="day-head"><span>${nombreDia} ${fechaStr}${esHoy?` · <span style="font-size:10px; letter-spacing:.03em; color:var(--teal);">HOY</span>`:""}</span><span>${d.medicos.length}</span></div>
+      <div class="day-head"><span>${nombreDia} ${fechaStr}${esHoy?` · <span style="font-size:10px; letter-spacing:.03em; color:var(--teal);">HOY</span>`:""}${filtroDia(d.fecha)?` · <span style="font-size:10px; color:var(--amber);">${filtroDia(d.fecha).texto}</span>`:""}</span><span>${d.medicos.length}</span></div>
       ${yaHechoHoy}${listaPendientes}
     </div>`;
   }).join("");
