@@ -140,8 +140,8 @@
       <p class="card-title">Progreso del ciclo</p>
       <p class="card-sub" id="cicloSub"></p>
       <div class="stat-grid3">
-        <div><div class="stat-big" id="cicloCompletados">0</div><div class="stat-label">completados</div></div>
-        <div><div class="stat-big" id="cicloPendientesMed">0</div><div class="stat-label">médicos pendientes</div></div>
+        <div><div class="stat-big" id="cicloCompletados">0</div><div class="stat-label">visitas realizadas</div></div>
+        <div><div class="stat-big" id="cicloPendientesMed">0</div><div class="stat-label">visitas pendientes</div></div>
         <div><div class="stat-big" id="cicloDiasRest">0</div><div class="stat-label">días laborables restantes</div></div>
       </div>
       <div class="bar-row" style="margin-top:14px;">
@@ -884,8 +884,8 @@ function renderCalendario(){
 
   document.getElementById("cicloSub").textContent =
     `El ciclo cierra el ${formatFecha(CYCLE_END)}. Hoy es ${formatFecha(hoy)}.` + (inicioPlanISO()>hoy ? ` El calendario empieza el ${formatFecha(inicioPlanISO())}.` : "");
-  document.getElementById("cicloCompletados").textContent = `${completados}/${conObjetivo.length}`;
-  document.getElementById("cicloPendientesMed").textContent = pendMedicos;
+  document.getElementById("cicloCompletados").textContent = sumRealizadas;
+  document.getElementById("cicloPendientesMed").textContent = Math.max(0, sumObjetivo - sumRealizadas);
   document.getElementById("cicloDiasRest").textContent = diasRestantesCalendario.length;
   document.getElementById("cicloVisitasLabel").textContent = `${sumRealizadas} / ${sumObjetivo}`;
   document.getElementById("cicloBarFill").style.width = sumObjetivo>0 ? `${(sumRealizadas/sumObjetivo)*100}%` : "0%";
