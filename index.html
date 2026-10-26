@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Territorio · Servier</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
 
@@ -23,7 +24,9 @@
   h1{font-family:'Source Serif 4',serif;font-weight:600;font-size:25px;margin:0 0 4px;letter-spacing:-.01em;}
   .subtitle{color:var(--dim);font-size:13px;line-height:1.5;max-width:46ch;}
 
-  .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--border);padding:3px;border-radius:10px;margin:18px 0;position:sticky;top:10px;z-index:5;}
+  .chart-box{position:relative;height:240px;}
+  .doc-nota{display:block;font-size:11.5px;line-height:1.4;color:var(--dim);margin-top:2px;}
+  .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--border);padding:3px;border-radius:10px;margin:18px 0;position:sticky;top:10px;z-index:5;}
   .tab{text-align:center;padding:8px 3px;font-size:11.5px;font-weight:500;border-radius:8px;cursor:pointer;color:var(--dim);background:transparent;}
   .tab.active{background:var(--panel);color:var(--ink);}
   .view{display:none;} .view.active{display:block;}
@@ -132,6 +135,7 @@
     <div class="tab" data-view="plan">Plan acción</div>
     <div class="tab" data-view="historial">Historial</div>
     <div class="tab" data-view="stats">Estadísticas</div>
+    <div class="tab" data-view="ventas">Ventas</div>
   </div>
 
   <!-- CALENDARIO -->
@@ -322,6 +326,39 @@
     </div>
   </div>
 
+  <div class="view" id="view-ventas">
+    <div class="card">
+      <p class="card-title">Septiembre 2026 · Total territorio</p>
+      <p class="card-sub">Unidades del mes, variación frente a agosto y % de cuota.</p>
+      <div id="ventasPanel"></div>
+    </div>
+    <div class="card">
+      <p class="card-title">% Cuota por franquicia</p>
+      <p class="card-sub">Marzo a septiembre 2026. La línea discontinua es el 100 %.</p>
+      <div class="chart-box"><canvas id="chCuota"></canvas></div>
+    </div>
+    <div class="card">
+      <p class="card-title">Unidades por franquicia</p>
+      <p class="card-sub">Septiembre 2025 a septiembre 2026. Daflon en el eje izquierdo; HTA y Lípidos en el derecho.</p>
+      <div class="chart-box"><canvas id="chUnidades"></canvas></div>
+    </div>
+    <div class="card">
+      <p class="card-title">Market share por hospital</p>
+      <p class="card-sub">MS de la franquicia en cada hospital, octubre 2025 a septiembre 2026.</p>
+      <div class="dayschk" id="msFranqSel"></div>
+      <div class="chart-box"><canvas id="chMS"></canvas></div>
+    </div>
+    <div class="card">
+      <p class="card-title">Sanibricks: MS oct-25 frente a sep-26</p>
+      <p class="card-sub">Market share de la franquicia en cada sanibrick. Línea discontinua: octubre 2025; línea llena: septiembre 2026.</p>
+      <div class="dayschk" id="saniFranqSel"></div>
+      <div class="dayschk" id="saniZonaSel" style="margin-bottom:6px;"></div>
+      <div id="saniResumen" style="font-size:12.5px;margin:6px 0 4px;"></div>
+      <div class="chart-box" style="height:340px;"><canvas id="chSani"></canvas></div>
+    </div>
+    <p class="card-sub" style="text-align:center;">Datos de Analisis_Ventas_Servier.xlsx (hasta septiembre 2026).</p>
+  </div>
+
 </div>
 <div id="toast"></div>
 
@@ -406,6 +443,205 @@ const REGLAS_VISITA = {
 const REGLAS_NORM = {};
 Object.keys(REGLAS_VISITA).forEach(k=>{ REGLAS_NORM[normKey(k)] = REGLAS_VISITA[k]; });
 function pausado(m){ const r=reglaDe(m); return !!(r && r.pausadoHasta && hoyISO() < r.pausadoHasta); }
+/* ======================= NOTAS DE MÉDICOS (de tus notas por centro) ======================= */
+// Para cambiar una nota, edita el texto. Se muestra debajo del médico en el calendario.
+const NOTAS_MEDICOS = {
+ "MARGARITA RIBES ARDANUY": "Rubia, alta. Comparte consulta con Victoria Cendrós. Agradable, pero parece que no receta.",
+ "MARIA VICTORIA CENDROS CAMARA": "Comparte consulta con Margarita Ribes.",
+ "SILVIA CANIVELL FUSTE": "Pendiente: reservar inscripción RedGDPS de noviembre.",
+ "ANNA ARROYO FERNANDEZ DE LIENCRES": "Rubia, bajita. Si le pones ACOD, quedan para desayunar. HTA no prescribe; Daflon sí.",
+ "LIDIA ARPAL SAGRISTA": "Morena.",
+ "HENRY FERRUFINO MENDOZA": "Sudamericano. Tienes su teléfono. Interesado en ACOD; convencerle con perindopril.",
+ "CRISTINA RAMON SAURI": "Bajita, de cierta edad, pelo corto castaño, a veces con gafas. Suele pararse; simpática.",
+ "FERNANDA CAROLINA ESCUDERO SALDAÑA": "Residente. Usa más Atorduo y Lipocomb que HTA; en mayores prefiere IECA o ARA II.",
+ "ALFONSO JAVIER PEREZ JIMENEZ": "Vicepresidente de la SEMG.",
+ "VALENTIN ARAGUNDE MIGUENS": "Suele recibir; simpático, te da su teléfono.",
+ "FRANCISCO PONT BARRIO": "Hombre mayor, amigo de Giovanni.",
+ "LAIA CAYUELAS REDONDO": "Desayuno los lunes.",
+ "VANESA JORGE SOSTOA": "Referente de HTA. Desayuno los lunes.",
+ "LIDIA PALLISA GABRIEL": "Hace cafés: hablar con Giovanni.",
+ "EMMA CATERINA MAGRANER OLIVER": "Muy rubia, pelo liso, delgada y bajita.",
+ "MARIA PILAR NAVARRETE DURAN": "Pendiente: preguntar por ella.",
+ "SUSANA RIVAS VILELA": "Hace domicilios. Tienes foto en el móvil.",
+ "NURIA SANCHEZ RUANO": "Bajita, pelo rizado rubio; parece enfermera.",
+ "PAULA VILLACORTA GALINDO": "Bajita, morena, pelo negro.",
+ "VANESA MAURI VAZQUEZ": "Alta, pelo castaño. Muy rápida.",
+ "MARIA LUISA BENITO SERRANO": "Bajita, pelo negro, habla castellano.",
+ "JUAN IGNACIO CARCAMO": "Barba, pelo negro, sudamericano (iba con mate). Muy buena visita.",
+ "IGNACIO MENACHO PASCUAL": "Difícil de ver: hace domicilios. Casi calvo, muy delgado.",
+ "XAVIER OTERO SERRA": "Pelo blanco, alto, mayor. Habla catalán.",
+ "ANDREA LOPEZ-MOLINA SANCHEZ": "Bajita, pelo negro, piel clara. Habla castellano.",
+ "DAVID MARTI GRAU": "Barba negra, mandíbula marcada.",
+ "BIBIANA CONTRERAS RARIS": "De baja.",
+ "MARIA LUISA MORO ESTEBAN": "Según tus notas está jubilada.",
+ "ELISABETH MARIA AVILA POZO": "Bajita, morena.",
+ "MARIA AMPARO DE LA POZA ABAD": "(Mariam) Presidenta de la SEMG. Anna Vidal es su residente.",
+ "ANNA VIDAL SEGALAS": "Residente de la Dra. de la Poza (Mariam).",
+ "MARIA INMACULADA GIL CANALDA": "Alta, rubia, pelo corto. Muy simpática, te recibe. Es de la promoción del director médico de Servier: darle recuerdos.",
+ "VICTOR MANUEL VALLEJO ARAGON": "Miércoles mañana: 1ª planta, última consulta. Martes tarde: consulta 05. Jueves mañana: consulta 09.",
+ "JOSE ANTONIO TERUEL GILA": "Pelo blanco corto, bajito.",
+ "ANA GONZALEZ LOPEZ": "Bajita, pelo rizado negro.",
+ "MIREIA SIMONET CAÑETE": "Bajita, pelo rizado negro, joven.",
+ "MARTA SELLARES CROUS": "Va en bici. No recibe a visitadores.",
+ "ISHAQ IMADEDDINE TIFOUR": "Marroquí, muy alto. Hace domicilios.",
+ "LAURA NAVARRO HUERTAS": "Pelo muy corto castaño/negro, gafas, habla catalán.",
+ "ARMANDO RAMIREZ WILCHES": "Consulta 5.",
+ "MATILDE FUENTES RIAZA": "Bajita, pelo rojizo/castaño, habla castellano. Te dio su email: próxima vez pedirle teléfono y preguntar si hace desayunos.",
+ "FRANCISCO PALLARES JIMENEZ": "Alto, habla castellano, pelo medio largo hacia atrás con canas.",
+ "MIGUEL ANGEL SARLAT RIBAS": "Gafas, pelo negro corto con canas, nariz grande, zapatillas Nike Jordan azules. Suele pararse; habla catalán.",
+ "MIGDALIA RODRIGUEZ JORGE": "Canaria, muy delgada, pelo corto rizado.",
+ "GUILLEM FLUXA TERRASA": "Jueves y viernes (1ª planta, Poble Sec).",
+ "GERARDO VIEYTES SUAREZ": "Amigo de Giovanni; a veces no recibe.",
+ "ANDRES FORMOSO DAVILA": "Recibe mucho.",
+ "CAROLINA GALINDO PARRES": "Clave: recibe mucho.",
+ "ELIAS MORON BERMEJO": "Grande, con gafas.",
+ "JOSEP LLAONA BUTIÑA": "Desayuno con Giovanni. Posible FIPEC.",
+ "ELISABET ESCOLA RIPOLL": "Bajita, rubia, pelo rizado. Le gusta Bipreterax porque no le gusta el amlodipino.",
+ "ANA LAURA MUÑOZ RUBIO": "Gafas rojas, pelo castaño corto, bajita. Habla catalán.",
+ "BRENDA ELIZABETH RIESGO ESCUDERO": "Argentina, muy maja.",
+ "MARTA JUAN PALACIOS": "Bajita, pelo rizado negro.",
+ "GLORIA SEGURA TORRENTS": "Amiga de Giovanni.",
+ "MARIANA BELEN ACOSTA DESTEFANO": "Nueva; se queda en Manso.",
+ "ANA FRANCO ALONSO": "Coordinadora y responsable de formación: hablar con ella para organizar una reunión.",
+ "MERITXELL MASIP BESO": "Sin problema; amiga de Giovanni.",
+ "ENCARNACION RAMON MENESES": "Tenía muy buena relación con Giovanni; ahora reticente con laboratorios, pero preguntar.",
+ "PABLO GRACIA ALONSO": "Amigo de Giovanni.",
+ "VERONICA DOMINGUEZ PANADERO": "Ojos saltones, piel muy blanca, pelo recogido. Se sabe tu nombre.",
+ "MAGDALENA CUBELLS RIBE": "Rubia, bajita.",
+ "ADRIANA AZORIN ARMELA": "Morena, pelo corto castaño. Pedirle el teléfono de la Dra. Lidia (CAP Adrià).",
+ "MONTSERRAT GIL TIMON": "Mayor, bajita, muy delgada, pelo ondulado. Va con prisa. Amiga de Giovanni.",
+ "DAVID LOPEZ HERAS": "Muy científico. Hay que pararlo; si no, no se para.",
+ "JORGE JOSE HERNANDEZ RODRIGUEZ": "Joven, barba de tres días.",
+ "PATRICIA ESPONA SANCHEZ": "Nueva. Pelo castaño, simpática. Estaba en Manso; también aparece en Montnegre.",
+ "ANGELA BELTRAN GUERRA": "Rubia, andaluza.",
+ "JOSE MIGUEL LLOVET LOMBARTE": "Según tus notas está jubilado.",
+ "ARLETHE DAYA ARISPE GUTIERREZ": "Bajita, morena. Tienes su teléfono.",
+ "CAROLINA BERMEJO NAVARRO": "Tienes su teléfono. Martes y jueves salen a desayunar: organizar un desayuno.",
+ "ELISABETH NAVARRO FONTANELLAS": "Bajita, pelo medio largo castaño, sin flequillo.",
+ "CLARA ORTI SEGARRA": "Bajita, pelo rizado, habla catalán, simpática. Tienes su teléfono.",
+ "JULIO CESAR VERASTEGUI CORDOVA": "Calvo, moreno, habla castellano.",
+ "ALEJANDRO RIBERA FERNANDEZ": "Hombre mayor, pelo negro rizado, bien vestido.",
+ "NURIA AUBACH FUERTES": "Alta, pelo rubio rizado. Carácter peculiar.",
+ "NOEMI ESCOLAR SANCHO": "Verla un jueves.",
+ "LUIS ALBERTO SZESCIELINSKI YUDYCKI": "Alto, pelo blanco. Lunes en Numancia (2ª planta); se va a las 13h si no tiene pacientes. Resto en Clínic, escalera 2, planta 6 (equipo Rut Andrea). Opina que atorva/eze 40/10 es un error (pasan a atorva 80 y luego combinan).",
+ "ANTONIO MONTILLA IBARRA": "Suele ir de mañanas. Desayuno los lunes con Alicia Puy (muy buena relación).",
+ "ALICIA PUY PENELLA": "Tienes su teléfono; muy simpática. Escribirle para desayuno (lunes, con Montilla).",
+ "MARINA GIGANTE LOPEZ": "De baja maternal.",
+ "JORDI HOYO SANCHEZ": "Suele estar en consulta 11; recibe bien. Mejor martes o jueves.",
+ "CARMEN PALLARES SERRANO": "Antes simpática, ahora menos.",
+ "MONICA AMOROS BROTONS": "Amiga de Giovanni. Mayor, pelo corto castaño; lo quiere rápido. Le diste el tríptico.",
+ "MONTSERRAT BURRULL GIMENO": "Difícil de ver, pero maja: pararla.",
+ "JOSE MANUEL CRUZ DOMENECH": "Bajito, pelo negro corto. Referente de hipertensión y de nefrología.",
+ "GUSTAVO JAVIER DE TORRES RAMIREZ": "Poco implicado.",
+ "MARIA ISABEL GAZQUEZ PEREZ": "Difícil.",
+ "ANNA PICAS JUFRESA": "Difícil.",
+ "JUDITH SOLE SANCHO": "Maja.",
+ "MARIA ANGELES SULE SALVADO": "Maja.",
+ "JUDITH SANCHEZ CANOVAS": "Rubia, ojos claros.",
+ "JAVIER MARTINEZ BRUBALLA": "Email: javi.mabr.96@gmail.com",
+ "ANDRES ALTES BORONAT": "Bajito, del Barça. Buena visita. Ponente de obesidad (LiveMed) y en las jornadas de diabetes del Clínic. Escribir por WhatsApp para quedar a comer.",
+ "MARIA EVA CALVO ROSA": "Pelo castaño, alta. Parece simpática, pero cuidado.",
+ "MARIA ANGELES MINGUEZA LAZARO": "Va muy deprisa. Pelo rizado. Habló de posología de Daflon.",
+ "SERGIO PALET PARAMO": "Más alto que tú, habla catalán. Visita hecha con Blomensy y pantonera.",
+ "MARIA BLANCA SARASA SOLA": "Rubia. Tienes su teléfono: pararla y escribir para un café.",
+ "SONIA RODRIGUEZ MARTINEZ": "No suele recibir.",
+ "MARISOL SANCHEZ SERNA": "Bajita, pelo blanco corto, gafas negras y plata. Su enfermera se llama Sánchez.",
+ "CARLOTA VICTORIA MUÑOZ DE LA NAVA BAILE": "Bajita, pelo negro, joven. Referente de nefro.",
+ "CAROLINA PAJUELO RIOS": "Martes en Plató, miércoles en CAP Sants. Ecos los jueves 9:00-9:15 en Clínic.",
+ "SEBASTIAN ALBERTO PAZ": "Martorell: lunes y jueves tarde, miércoles y viernes mañana. Esparreguera: martes y miércoles tarde, jueves mañana, viernes tarde.",
+ "NICOLAS MANITO LORITE": "Corachán: miércoles a primera hora (~9:45). Comentar cómo ayudar con el programa cardiorrenal.",
+ "JUAN ROBERTO PERAIRA MORAL": "En Clínica Corachán (miércoles ~9:30, consulta 14:30). Quedasteis para desayunar.",
+ "MIGUEL ANGEL GOMEZ PEREZ": "Corachán, planta 2, de 10 a 14h.",
+ "SARA ANDREIA TAVARES NOGUEIRA": "Corachán, miércoles ~9:30.",
+ "JOSE EDUARDO LARROUSSE MORELLON": "Corachán (miércoles).",
+ "PEDRO JOAQUIN CARAVACA PEREZ": "Importante en IC/cardiorrenal. Martes: 4ª CCEE ala Rosselló (nefro, sala 12); a las 13h, planta 5. Resto de días hospital de día de cardio. Jueves en CAP Montnegre.",
+ "MARIA ANGELES CASTEL LAVILLA": "Ir con cuidado: algo seria si no hay confianza. Alta, pelo negro-rojizo. Le enviaste un mail.",
+ "ADELINA DOLTRA MAGAROLAS": "Planta 4, ecocardios (ecos jueves 9:00-9:15). Pelo negro corto, muy simpática; le gustan las combinaciones. Comentarle que es sin lactosa; quedar por mail. Puede jubilarse pronto.",
+ "CARLES FALCES SALVADOR": "Jefe del ambulatorio de cardio. Muy reservado y cuadriculado. Lipocomb: trabajo hecho. No pararlo en el pasillo: concretar visita por mail.",
+ "MARTA FARRERO TORRES": "Jefa de insuficiencia cardiaca. Martes: planta 4, pasillo Rosselló. Miércoles: CCEE. Viernes: planta 5 de CCEE.",
+ "ANA GARCIA ALVAREZ": "Jefa del servicio de cardiología. Muy simpática. Jueves en consultas externas.",
+ "EDUARD GUASCH CASANY": "Unidad de fibrilación auricular. Muy simpático; quizá no prescribe. Martes en CCEE.",
+ "ANNA MALLOL KIRCHNER": "En Sagrat Cor: lunes y martes consultas 1ª planta, después CAP Manso. Va a tope: mejor a primera hora. Le enviaste mail.",
+ "JUAN JOSE RODRIGUEZ ARIAS": "Núcleo IC, importante. En Plató (despacho 03). Miércoles en CAP Compte Borrell.",
+ "MARIA MERCE ROQUE MORENO": "Complicada de ver: viernes de 12 a 13h (consulta los jueves). Rubia, pelo corto.",
+ "EDUARD SOLE GONZALEZ": "Núcleo IC, de los más importantes; muy científico. Martes en Plató, miércoles en CCEE, viernes en hospital de día. Conoce la combo Lipocomb. Llevar algo de valor. Pelo corto blanco. Lunes y miércoles, peores días.",
+ "MARIA CRISTINA VEHI GASOL": "Da mucho pero pide mucho. Jueves tarde en CAP Magòria; tienes su teléfono. Hace marcha nórdica. ACOD: su traumatólogo pregunta por financiación en TEV (pacientes jóvenes que no quieren pincharse).",
+ "IÑIGO ANDUAGA ELORZA": "Adjunto 1º, válvulas. Escalera 1, planta 6 (hospital de día unidad coronaria). Tienes su teléfono.",
+ "EVA MORENO MONTERDE": "Fue residente en Clínic; ahora adjunta.",
+ "ANDREA ARENAS LORIENTE": "Residente que se ha quedado; bajita. Tienes su teléfono.",
+ "RUT ANDREA RIBA": "Pedir cita por mail. Colaboración ACVC Lisboa (20-21 marzo 2026): mail a César sobre el nacional y hablar con la agencia por los vuelos.",
+ "TERESA LOPEZ SOBRINO": "Martes por la mañana en CAP El Foc (Carles Ribas). En Clínic: ir de 14:30 a 15h; llevárselos a comer.",
+ "SALVATORE BRUGALETTA": "Siempre pregunta por novedades: llevar alguna. Nunca rivaroxaban, siempre apixaban. Ve coronario y casos raros, poca IC. Atorduo y Lipocomb: dice que sí.",
+ "ORIOL DE DIEGO SOLER": "Pelo castaño rubio con barba. Coronaria, muy interesante. En teoría pasa CAP (Roger). Pendiente conocerlo.",
+ "ANGELA RODRIGUEZ EGUREN": "Residente. Viernes 1/6 con Eduard Solé. Morena, pelo largo.",
+ "ORIOL VENTOSA BLAZQUEZ": "Residente R2.",
+ "PASTORA RODRIGUEZ FRAGA": "Residente R4.",
+ "MARC BRUSOSA BAULENAS": "Residente.",
+ "SUSANA PRAT GONZALEZ": "Ecos los jueves 9:00-9:15 en Clínic. Martes en CAP Montnegre.",
+ "PAMELA INES DOTI": "Ir a verla: escalera 1, planta 5.",
+ "ESTEBAN POCH LOPEZ DE BRIÑAS": "Hace un trial con Bipreterax. Email: epoch@clinic.cat",
+ "JOSE JESUS BROSETA MONZO": "Usa Atorduo 40 porque en nefro no suben a atorva 80. Perindopril a veces; le interesó Viacorlix (no conocía lo de la arginina ni por qué la dosis es 7 mg).",
+ "ELENA CUADRADO PAYAN": "Maja. Ver notas del iPhone de empresa.",
+ "DIANA MARIA RODRIGUEZ ESPINOZA": "Jueves a las 15h.",
+ "EMMANUEL COLOMA BAZAN": "Atención domiciliaria, muy potente. Ha dado charlas.",
+ "JESUS AIBAR GALLIZO": "Jefe de servicio de medicina interna. Grupo de trabajo IC-FA. Preguntarle quién lleva FA y lípidos.",
+ "ANNA ALDEA PARES": "Adjunta de atención domiciliaria (Clínic/Plató). Ponencia sobre vacunas (gripe con IC e infarto); ha recomendado estatinas.",
+ "CONSTANZA ANDREA SEPULVEDA GALLARDO": "Perfil parecido a Camafort.",
+ "DAVID NICOLAS OCEJO": "Como el jefe de atención domiciliaria.",
+ "PERE MEDINA MARTI": "Residente: te ayuda con el resto. Pedirle que te presente a los residentes.",
+ "EMILIO ORTEGA MARTINEZ-VICTORIA": "Endocrino: lípidos y obesidad.",
+ "CRISTINA SIERRA BENITO": "Plató, al lado de la cafetería. Usa mucho apixaban y poco rivaroxaban. Muy maja; no toma cafés. Pelo rizado negro corto, habla castellano. Enviar mail.",
+ "MARIA ORTIZ RODRIGUEZ": "Plató. Alta, pelo rizado, gafas.",
+ "MARIA SANCHEZ TORRES": "Jueves a las 11:00 en Plató. Contactar por mail; parece simpática. Apretar con Blomensy.",
+ "MARTINA PELLICE ARIÑO": "Lunes en consultas externas; resto de días en hospital Plató.",
+ "SERGIO AMARO DELGADO": "Neurólogos del Clínic: martes y viernes de 9:00 a 9:30.",
+ "ARTURO RENU JORNET": "Neurólogos del Clínic: martes y viernes de 9:00 a 9:30.",
+ "ANTONIO DONCEL-MORIANO CUBERO": "Neurólogos del Clínic: martes y viernes de 9:00 a 9:30.",
+ "GIOVANNA BENEDETTI": "Urgencias (Plató).",
+ "CESAR GARCIA MADRID": "Usa dabigatrán en anticoagulación.",
+ "GASPAR MESTRES ALOMAR": "No usa hipolipemiantes ni anticoagulantes.",
+ "JAVIER YUGUEROS CASTELLNOU": "Carótidas: en contacto con neurólogos; tratan la dislipemia.",
+ "ALBERT GONZALEZ SAGREDO": "Sagrat Cor, planta 4.",
+ "JOAQUIN RAMON FERNANDEZ SOLA": "Email: jfernand@clinic.cat",
+ "CYNTHIA PAOLA PAREDES PAUCAR": "Ecocardios de lunes a jueves (gabinete 4); viernes en CAP Manso. 80 % de pacientes con dislipemia; usa mucho Atozet y si no, Rosu 40. No conoce los nuestros. Desayuna hacia las 10:40.",
+ "JOSE CRISTOBAL DIAZ VILLANUEVA": "Ecocardios, consulta 5. Quizá no está los martes. Tienes su WhatsApp.",
+ "SAMIR TUMA MAROKY": "Núcleo IC, de la vieja escuela (Sagrat Cor). Se apunta a todo, pero no prescribe.",
+ "ANA LOZANO MIÑANA": "Se jubila en verano.",
+ "ROSARIO SALAS CAMPOS": "Bajita. Se jubila pronto.",
+ "BERTA FERNANDEZ CAMINS": "Medicina general Sagrat Cor. Doctorado en endocrinología.",
+ "SUSANA VALIENTE HERNANDEZ": "Medicina general Sagrat Cor.",
+ "BRIGITTE SILVANA ALARCON JIMENEZ": "Medicina general Sagrat Cor.",
+ "PABLO ECHEVARRIA DIEZ-CANEDO": "Medicina interna Sagrat Cor: pasa consulta.",
+ "BENITO ANDRES SAINZ GONZALEZ DE LA PEÑA": "Bajito. Pruebas de esfuerzo los martes por la mañana. Tiene que poner el producto en el ordenador. Email: bsainz70@gmail.com",
+ "BIOLKYS YANIRA ZORIO VALDES": "Martes por la mañana (Sagrada Família).",
+ "MARIA FLAVIA MARTINEZ COPELLO": "Martes por la mañana. Tiene que poner Atorduo y Blomensy en el ordenador (no le aparecen).",
+ "RICARDO MIGUEL BELISARIO BERRIOS": "Bajito, venezolano, simpático. Usa apixaban; perindopril/indapamida lo consulta con el cardiólogo.",
+ "ALFONSO RENE AVILA CALVO": "Jefe de urgencias; todas las mañanas.",
+ "KESIA GRANELA CORTIÑAS": "Martes y jueves: enviar WhatsApp y quedar. Planta 1, consulta 73-74. Morena, bajita, muy simpática. Cursos SEEN: 450 € socios.",
+ "SARA GARCIA PELEGRI": "Cirugía vascular pasa consulta los miércoles. Planta 3, mismo despacho que Adriana Soto.",
+ "ADRIANA SOTO PRIORE": "Planta 3, mismo despacho que Sara García Pelegrí.",
+ "SALVANY VALLE HERNANDEZ RAMIREZ": "Escribir por WhatsApp.",
+ "NURIA CALCERRADA LABRADOR": "Atorduo, Bipreterax, Procoralan.",
+ "MONTSERRAT PRATS JULIA": "Bipreterax. Todos los días menos los lunes."
+};
+const NOTAS_CENTRO = {
+ "EAP COMTE BORRELL": "Centro: buen CAP salvo lunes y viernes.",
+ "EAP 4A MONTNEGRE": "Centro: mejor martes o jueves; esos días salen a desayunar.",
+ "EAP 3G NUMANCIA": "Centro: cardiología los lunes en 2ª planta.",
+ "EAP 3B POBLE SEC": "Centro: Manso, 1ª planta.",
+ "EAP 2A SANT ANTONI": "Centro: Manso, 2ª planta (más potencial).",
+ "EAP 2B VIA ROMA": "Centro: Manso, 3ª planta (más potencial).",
+ "EAP 2D UNIVERSITAT": "Centro: Manso, 4ª planta. Reciben el viernes; siempre salen a desayunar.",
+ "CAP ESPARREGUERA": "Centro: coordinadora Mariela (tienes su teléfono)."
+};
+const NOTAS_NORM = {}; Object.keys(NOTAS_MEDICOS).forEach(k=>{ NOTAS_NORM[normKey(k)] = NOTAS_MEDICOS[k]; });
+function notaDe(m){
+  const n = NOTAS_NORM[normKey(m.nombre)] || "";
+  const c = NOTAS_CENTRO[nombreCentro(m.centroId)] || "";
+  return [n,c].filter(Boolean).join(" ");
+}
+const JUBILAN = new Set(["JOSE MIGUEL LLOVET LOMBARTE", "MARIA LUISA MORO ESTEBAN", "ANA LOZANO MIÑANA", "ROSARIO SALAS CAMPOS", "ADELINA DOLTRA MAGAROLAS"].map(normKey));
+function jubila(m){ return JUBILAN.has(normKey(m.nombre)); }
 function reglaDe(m){ return REGLAS_NORM[normKey(m.nombre)] || null; }
 function textoRegla(m){
   const r = reglaDe(m); if(!r) return "";
@@ -1044,7 +1280,7 @@ function renderCalendario(){
 
     const listaPendientes = d.medicos.length>0
       ? (esHoy ? `<p class="card-sub" style="margin:0 0 4px;">Marca la casilla junto al nombre para registrar la visita.</p>` : "")
-        + d.medicos.map(m=>`<div class="day-doc" style="align-items:center;">${esHoy?checkboxConfirmar(m):""}<span class="day-doc-name">${escapeHtml(m.nombre)} <span class="center-type">${escapeHtml(m.especialidad||"")} · ${escapeHtml(nombreCentro(m.centroId))}${escapeHtml(textoRegla(m))}</span></span>${aplazarBtn(m)}</div>`).join("")
+        + d.medicos.map(m=>`<div class="day-doc" style="align-items:center;">${esHoy?checkboxConfirmar(m):""}<span class="day-doc-name"${jubila(m)?' style="color:var(--rose);"':""}>${escapeHtml(m.nombre)}${jubila(m)?" · se jubila":""} <span class="center-type">${escapeHtml(m.especialidad||"")} · ${escapeHtml(nombreCentro(m.centroId))}${escapeHtml(textoRegla(m))}</span>${notaDe(m)?`<span class="doc-nota">${escapeHtml(notaDe(m))}</span>`:""}</span>${aplazarBtn(m)}</div>`).join("")
       : (esHoy ? `<div class="empty-hint" style="padding:4px 0;">Sin visitas pendientes asignadas para hoy.</div>` : "");
 
     return `<div class="day-block">
@@ -1284,6 +1520,112 @@ function renderStats(){
 }
 
 /* ======================= REFRESCAR TODO ======================= */
+/* ======================= VENTAS (datos del Excel Analisis_Ventas_Servier) ======================= */
+const VENTAS = {
+  panel: [ // producto, uds sep, uds ago, % cuota
+    ["Viacoram",232,179,0.8657],["Bipreterax",270,188,0.8282],["Viacorlix",142,110,1.0290],
+    ["Atorduo",271,185,1.0037],["Lipocomb",345,252,0.7841],["Daflon 500",2244.6,2515.5,0.8584],
+    ["Procoralan + Corlentor",482,333,0.9718]
+  ],
+  cuotaMeses: ["mar","abr","may","jun","jul","ago","sep"],
+  cuota: {
+    "Daflon":    [0.9257,0.9517,0.9233,1.0732,1.0774,0.8550,0.8584],
+    "HTA":       [0.8999,0.8077,0.8536,0.8900,0.9156,0.6625,0.8798],
+    "Lípidos":   [0.9118,0.8131,0.8877,0.7379,0.8685,0.6379,0.8761],
+    "Procoralan":[0.9926,0.9739,0.8606,0.9827,0.9173,0.6824,0.9718]
+  },
+  udsMeses: ["sep-25","oct","nov","dic","ene-26","feb","mar","abr","may","jun","jul","ago","sep-26"],
+  uds: {
+    "Daflon":  [2147.5,1825,1583,1549.5,1545.5,1421,1668,1830.5,2258,3307,3598,2518.5,2253.6],
+    "HTA":     [563,594,614,572,570,609,665,609,659,647,673,477,644],
+    "Lípidos": [459,505,457,519,583,550,579,522,577,518,614,444,622]
+  },
+  msMeses: ["oct-25","nov","dic","ene-26","feb","mar","abr","may","jun","jul","ago","sep-26"],
+  ms: {
+    "Daflon":  {"Clínic":[0.4867,0.4895,0.4917,0.4947,0.4967,0.4977,0.4998,0.4989,0.5009,0.5009,0.5023,0.5026],
+                "Plató":[0.5482,0.5545,0.5517,0.5546,0.5520,0.5514,0.5522,0.5517,0.5504,0.5494,0.5505,0.5535],
+                "Martorell":[0.3453,0.3466,0.3504,0.3528,0.3559,0.3557,0.3513,0.3500,0.3489,0.3511,0.3486,0.3470]},
+    "HTA":     {"Clínic":[0.0339,0.0341,0.0337,0.0335,0.0334,0.0334,0.0331,0.0332,0.0333,0.0335,0.0334,0.0339],
+                "Plató":[0.0303,0.0317,0.0305,0.0307,0.0314,0.0321,0.0318,0.0322,0.0334,0.0341,0.0341,0.0341],
+                "Martorell":[0.0429,0.0423,0.0424,0.0428,0.0433,0.0418,0.0422,0.0421,0.0413,0.0417,0.0414,0.0410]},
+    "Lípidos": {"Clínic":[0.0528,0.0523,0.0521,0.0520,0.0526,0.0528,0.0524,0.0531,0.0530,0.0525,0.0527,0.0526],
+                "Plató":[0.0522,0.0517,0.0527,0.0523,0.0522,0.0501,0.0494,0.0477,0.0472,0.0480,0.0488,0.0508],
+                "Martorell":[0.0780,0.0767,0.0757,0.0743,0.0757,0.0734,0.0729,0.0710,0.0688,0.0689,0.0677,0.0671]}
+  }
+};
+const COLORES_FRANQ = {"Daflon":"#3F6659","HTA":"#C08A3E","Lípidos":"#B8574A","Procoralan":"#5E7398"};
+const COLORES_HOSP = {"Clínic":"#3F6659","Plató":"#C08A3E","Martorell":"#B8574A"};
+let ventasCharts = {}; let msFranq = "Daflon";
+const SANIBRICKS = {"Mercado Daflon": [["Barcelona", "Comte Borrell", 0.5022, 0.5181, "Gana"], ["Barcelona", "Sant Antoni", 0.5494, 0.5545, "Gana"], ["Barcelona", "Via Roma", 0.5106, 0.5302, "Gana"], ["Barcelona", "Universitat", 0.5565, 0.5892, "Gana"], ["Barcelona", "Carles Ribas", 0.2679, 0.268, "Estable"], ["Barcelona", "Bordeta-Magòria", 0.3831, 0.3736, "Pierde"], ["Barcelona", "Sants", 0.468, 0.4594, "Pierde"], ["Barcelona", "Numància", 0.5251, 0.5698, "Gana"], ["Barcelona", "Marina", 0.3973, 0.3786, "Pierde"], ["Barcelona", "Roger", 0.4044, 0.3839, "Pierde"], ["Barcelona", "Poble Sec", 0.4891, 0.5181, "Gana"], ["Barcelona", "Montnegre (4A)", 0.4853, 0.5315, "Gana"], ["Barcelona", "Les Corts", 0.4375, 0.484, "Gana"], ["Barcelona", "Sarrià", 0.513, 0.5323, "Gana"], ["Barcelona", "Marc Aureli", 0.5809, 0.5983, "Gana"], ["Barcelona", "Sant Elies", 0.4965, 0.56, "Gana"], ["Barcelona", "Les Hortes", 0.4723, 0.4622, "Pierde"], ["Barcelona", "Les Planes", 0.628, 0.4897, "Pierde"], ["Barcelona", "Casanova", 0.5592, 0.605, "Gana"], ["Barcelona", "Montnegre (2)", 0.5348, 0.5306, "Estable"], ["Martorell", "Abrera", 0.3577, 0.3968, "Gana"], ["Martorell", "Collbató-Esparreguera", 0.4468, 0.3807, "Pierde"], ["Martorell", "Gelida-Masquefa", 0.2596, 0.2843, "Gana"], ["Martorell", "Martorell", 0.3438, 0.3409, "Estable"], ["Martorell", "Olesa", 0.3577, 0.3968, "Gana"], ["Martorell", "Pallejà", 0.3063, 0.3122, "Gana"], ["Martorell", "Sant Andreu de la Barca", 0.3063, 0.3122, "Gana"]], "Mercado HTA": [["Barcelona", "Comte Borrell", 0.0875, 0.0871, "Estable"], ["Barcelona", "Sant Antoni", 0.0185, 0.0145, "Pierde"], ["Barcelona", "Via Roma", 0.0525, 0.0537, "Gana"], ["Barcelona", "Universitat", 0.044, 0.0515, "Gana"], ["Barcelona", "Carles Ribas", 0.0122, 0.0147, "Gana"], ["Barcelona", "Bordeta-Magòria", 0.0251, 0.0267, "Gana"], ["Barcelona", "Sants", 0.0419, 0.0358, "Pierde"], ["Barcelona", "Numància", 0.0512, 0.0532, "Gana"], ["Barcelona", "Marina", 0.0077, 0.0107, "Gana"], ["Barcelona", "Roger", 0.0081, 0.0102, "Gana"], ["Barcelona", "Poble Sec", 0.0255, 0.0204, "Pierde"], ["Barcelona", "Montnegre (4A)", 0.0604, 0.0675, "Gana"], ["Barcelona", "Les Corts", 0.0262, 0.0296, "Gana"], ["Barcelona", "Sarrià", 0.0404, 0.0485, "Gana"], ["Barcelona", "Marc Aureli", 0.0332, 0.0316, "Pierde"], ["Barcelona", "Sant Elies", 0.0246, 0.0245, "Estable"], ["Barcelona", "Les Hortes", 0.0155, 0.0193, "Gana"], ["Barcelona", "Les Planes", 0.0255, 0.0436, "Gana"], ["Barcelona", "Casanova", 0.0378, 0.0305, "Pierde"], ["Barcelona", "Montnegre (2)", 0.0436, 0.0477, "Gana"], ["Martorell", "Abrera", 0.0186, 0.0241, "Gana"], ["Martorell", "Collbató-Esparreguera", 0.0438, 0.0364, "Pierde"], ["Martorell", "Gelida-Masquefa", 0.022, 0.0189, "Pierde"], ["Martorell", "Martorell", 0.1091, 0.0957, "Pierde"], ["Martorell", "Olesa", 0.0257, 0.0323, "Gana"], ["Martorell", "Pallejà", 0.0299, 0.0219, "Pierde"], ["Martorell", "Sant Andreu de la Barca", 0.0224, 0.0289, "Gana"]], "Mercado Lípidos": [["Barcelona", "Comte Borrell", 0.0926, 0.0915, "Pierde"], ["Barcelona", "Sant Antoni", 0.0652, 0.0543, "Pierde"], ["Barcelona", "Via Roma", 0.0645, 0.0783, "Gana"], ["Barcelona", "Universitat", 0.0815, 0.0839, "Gana"], ["Barcelona", "Carles Ribas", 0.061, 0.0498, "Pierde"], ["Barcelona", "Bordeta-Magòria", 0.0369, 0.0401, "Gana"], ["Barcelona", "Sants", 0.0495, 0.0539, "Gana"], ["Barcelona", "Numància", 0.045, 0.0408, "Pierde"], ["Barcelona", "Marina", 0.0449, 0.0417, "Pierde"], ["Barcelona", "Roger", 0.0243, 0.0252, "Estable"], ["Barcelona", "Poble Sec", 0.0544, 0.0547, "Estable"], ["Barcelona", "Montnegre (4A)", 0.0541, 0.0574, "Gana"], ["Barcelona", "Les Corts", 0.025, 0.026, "Estable"], ["Barcelona", "Sarrià", 0.0646, 0.0721, "Gana"], ["Barcelona", "Marc Aureli", 0.0389, 0.0379, "Pierde"], ["Barcelona", "Sant Elies", 0.0575, 0.0482, "Pierde"], ["Barcelona", "Les Hortes", 0.034, 0.0256, "Pierde"], ["Barcelona", "Les Planes", 0.051, 0.0533, "Gana"], ["Barcelona", "Casanova", 0.0614, 0.0625, "Gana"], ["Barcelona", "Montnegre (2)", 0.0488, 0.0473, "Pierde"], ["Martorell", "Abrera", 0.0945, 0.087, "Pierde"], ["Martorell", "Collbató-Esparreguera", 0.1498, 0.1297, "Pierde"], ["Martorell", "Gelida-Masquefa", 0.0487, 0.0454, "Pierde"], ["Martorell", "Martorell", 0.0371, 0.0314, "Pierde"], ["Martorell", "Olesa", 0.0894, 0.0799, "Pierde"], ["Martorell", "Pallejà", 0.0544, 0.0443, "Pierde"], ["Martorell", "Sant Andreu de la Barca", 0.0679, 0.05, "Pierde"]]}; // [zona, sanibrick, MS oct-25, MS sep-26, tendencia]
+let saniFranq = "Daflon", saniZona = "Barcelona";
+function renderSanibricks(){
+  const fs = document.getElementById("saniFranqSel"), zs = document.getElementById("saniZonaSel");
+  fs.innerHTML = ["Daflon","HTA","Lípidos"].map(f=>`<div class="daychk${f===saniFranq?" on":""}" data-sf="${f}">${f}</div>`).join("");
+  zs.innerHTML = ["Barcelona","Martorell"].map(z=>`<div class="daychk${z===saniZona?" on":""}" data-sz="${z}">${z}</div>`).join("");
+  fs.querySelectorAll("[data-sf]").forEach(el=>el.onclick=()=>{ saniFranq=el.dataset.sf; renderSanibricks(); });
+  zs.querySelectorAll("[data-sz]").forEach(el=>el.onclick=()=>{ saniZona=el.dataset.sz; renderSanibricks(); });
+  const filas = SANIBRICKS["Mercado "+saniFranq].filter(r=>r[0]===saniZona);
+  const cnt = t=>filas.filter(r=>r[4]===t).length;
+  document.getElementById("saniResumen").innerHTML =
+    `<span style="color:var(--teal);">▲ Gana ${cnt("Gana")}</span> · <span style="color:var(--dim);">= Estable ${cnt("Estable")}</span> · <span style="color:var(--rose);">▼ Pierde ${cnt("Pierde")}</span>`;
+  if(typeof Chart==="undefined") return;
+  if(ventasCharts.sani) ventasCharts.sani.destroy();
+  const dec = saniFranq==="Daflon"?0:1;
+  ventasCharts.sani = new Chart(document.getElementById("chSani"),{type:"radar",
+    data:{labels:filas.map(r=>r[1]), datasets:[
+      {label:"oct-25", data:filas.map(r=>r[2]), borderColor:"#9A9C93", backgroundColor:"rgba(154,156,147,.12)", borderDash:[4,4], pointRadius:2, borderWidth:1.5},
+      {label:"sep-26", data:filas.map(r=>r[3]), borderColor:COLORES_FRANQ[saniFranq], backgroundColor:COLORES_FRANQ[saniFranq]+"22", pointRadius:3, borderWidth:2,
+       pointBackgroundColor:filas.map(r=>r[4]==="Gana"?"#3F6659":(r[4]==="Pierde"?"#B8574A":"#9A9C93"))}]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:"bottom",labels:{boxWidth:10,boxHeight:10}},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${(c.parsed.r*100).toFixed(dec+1).replace(".",",")} %`}}},
+      scales:{r:{beginAtZero:true, ticks:{display:false}, pointLabels:{font:{size:9.5}}}}}});
+}
+const pct = (v,d=1)=> (v*100).toFixed(d).replace(".",",")+" %";
+
+function renderVentas(){
+  if(!document.getElementById("view-ventas").classList.contains("active")) return;
+  // Panel del mes (no necesita librería)
+  document.getElementById("ventasPanel").innerHTML = VENTAS.panel.map(([p,u,ua,c])=>{
+    const v=(u-ua)/ua, col=v>=0?"var(--teal)":"var(--rose)", cc=c>=1?"var(--teal)":"var(--rose)";
+    return `<div class="bar-row" style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border);">
+      <span style="flex:1;">${escapeHtml(p)}</span>
+      <span style="width:62px;text-align:right;font-family:'IBM Plex Mono',monospace;">${Math.round(u).toLocaleString("es-ES")}</span>
+      <span style="width:62px;text-align:right;color:${col};font-family:'IBM Plex Mono',monospace;">${v>=0?"+":""}${pct(v,0)}</span>
+      <span style="width:62px;text-align:right;color:${cc};font-family:'IBM Plex Mono',monospace;">${pct(c,0)}</span></div>`;
+  }).join("") + `<div style="display:flex;justify-content:flex-end;gap:8px;font-size:10px;color:var(--dim);padding-top:4px;"><span style="width:62px;text-align:right;">uds</span><span style="width:62px;text-align:right;">vs ago</span><span style="width:62px;text-align:right;">cuota</span></div>`;
+
+  const chips = document.getElementById("msFranqSel");
+  chips.innerHTML = Object.keys(VENTAS.ms).map(f=>`<div class="daychk${f===msFranq?" on":""}" data-franq="${f}">${f}</div>`).join("");
+  chips.querySelectorAll("[data-franq]").forEach(el=>el.onclick=()=>{ msFranq=el.dataset.franq; renderVentas(); });
+
+  if(typeof Chart==="undefined"){
+    renderSanibricks();
+    ["chCuota","chUnidades","chMS","chSani"].forEach(id=>{ const c=document.getElementById(id); c.parentElement.innerHTML='<div class="empty-hint">No se han podido cargar las gráficas (sin conexión).</div>'; });
+    return;
+  }
+  Object.values(ventasCharts).forEach(c=>c.destroy()); ventasCharts={};
+  Chart.defaults.font.family="'IBM Plex Sans',sans-serif"; Chart.defaults.font.size=11; Chart.defaults.color="#7A7E72";
+  const base = {responsive:true, maintainAspectRatio:false, interaction:{mode:"index",intersect:false},
+    plugins:{legend:{position:"bottom",labels:{boxWidth:10,boxHeight:10}}}};
+
+  ventasCharts.cuota = new Chart(document.getElementById("chCuota"),{type:"line",
+    data:{labels:VENTAS.cuotaMeses, datasets:Object.entries(VENTAS.cuota).map(([f,d])=>({label:f,data:d,borderColor:COLORES_FRANQ[f],backgroundColor:COLORES_FRANQ[f],cubicInterpolationMode:'monotone',pointRadius:2}))
+      .concat([{label:"100 %",data:VENTAS.cuotaMeses.map(()=>1),borderColor:"#9A9C93",borderDash:[4,4],pointRadius:0,borderWidth:1}])},
+    options:{...base, plugins:{...base.plugins, tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${pct(c.parsed.y)}`}}},
+      scales:{y:{ticks:{callback:v=>Math.round(v*100)+" %"},suggestedMin:0.6,suggestedMax:1.1}}}});
+
+  ventasCharts.uds = new Chart(document.getElementById("chUnidades"),{type:"line",
+    data:{labels:VENTAS.udsMeses, datasets:Object.entries(VENTAS.uds).map(([f,d])=>({label:f,data:d,borderColor:COLORES_FRANQ[f],backgroundColor:COLORES_FRANQ[f],cubicInterpolationMode:'monotone',pointRadius:2,yAxisID:f==="Daflon"?"y":"y2"}))},
+    options:{...base, scales:{y:{position:"left",title:{display:true,text:"Daflon"}},y2:{position:"right",grid:{drawOnChartArea:false},title:{display:true,text:"HTA · Lípidos"}}}}});
+
+  ventasCharts.ms = new Chart(document.getElementById("chMS"),{type:"line",
+    data:{labels:VENTAS.msMeses, datasets:Object.entries(VENTAS.ms[msFranq]).map(([h,d])=>({label:h,data:d,borderColor:COLORES_HOSP[h],backgroundColor:COLORES_HOSP[h],cubicInterpolationMode:'monotone',pointRadius:2}))},
+    options:{...base, plugins:{...base.plugins, tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${pct(c.parsed.y,2)}`}}},
+      scales:{y:{ticks:{callback:v=>(v*100).toFixed(msFranq==="Daflon"?0:1)+" %"}}}}});
+  renderSanibricks();
+}
+
 function renderTodo(){
   poblarSelectCentros();
   renderDirectorio();
@@ -1291,6 +1633,7 @@ function renderTodo(){
   renderCalendario();
   renderHistorial();
   renderStats();
+  renderVentas();
 }
 
 cargarTodo();
