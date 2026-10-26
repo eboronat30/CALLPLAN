@@ -1563,7 +1563,7 @@ const VENTAS = {
 };
 const COLORES_FRANQ = {"Daflon":"#3F6659","HTA":"#C08A3E","Lípidos":"#B8574A","Procoralan":"#5E7398"};
 const COLORES_HOSP = {"Clínic":"#3F6659","Plató":"#C08A3E","Martorell":"#B8574A"};
-let ventasCharts = {}; let msFranq = "Daflon";
+let ventasCharts = {}; let msFranq = "Daflon"; let crearMS = null;
 // Cajas por hospital (hoja "Ventas hospital" del Excel), sep-25 → sep-26
 const UDS_HOSP = {
   "Daflon":  {"Clínic":[1491.5,1215.5,1045.5,1041,1009.5,952.5,1089,1236.5,1451,2263.5,2413,1766.5,1505.6],
@@ -1686,7 +1686,8 @@ function renderVentas(){
 
   const chips = document.getElementById("msFranqSel");
   chips.innerHTML = Object.keys(VENTAS.ms).map(f=>`<div class="daychk${f===msFranq?" on":""}" data-franq="${f}">${f}</div>`).join("");
-  chips.querySelectorAll("[data-franq]").forEach(el=>el.onclick=()=>{ msFranq=el.dataset.franq; renderVentas(); });
+  // cambiar de franquicia aquí solo redibuja este gráfico (no toca el resto)
+  chips.querySelectorAll("[data-franq]").forEach(el=>el.onclick=()=>{ msFranq=el.dataset.franq; chips.querySelectorAll("[data-franq]").forEach(c=>c.classList.toggle("on",c.dataset.franq===msFranq)); if(crearMS) crearMS(); });
 
   if(typeof Chart==="undefined"){
     renderSanibricks(); renderUnidades();
@@ -1706,10 +1707,12 @@ function renderVentas(){
 
   renderUnidades();
 
+  crearMS = ()=>{ if(ventasCharts.ms) ventasCharts.ms.destroy();
   ventasCharts.ms = new Chart(document.getElementById("chMS"),{type:"line",
     data:{labels:VENTAS.msMeses, datasets:Object.entries(VENTAS.ms[msFranq]).map(([h,d])=>({label:h,data:d,borderColor:COLORES_HOSP[h],backgroundColor:COLORES_HOSP[h],cubicInterpolationMode:'monotone',pointRadius:2}))},
     options:{...base, plugins:{...base.plugins, tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${pct(c.parsed.y,2)}`}}},
-      scales:{y:{ticks:{callback:v=>(v*100).toFixed(msFranq==="Daflon"?0:1)+" %"}}}}});
+      scales:{y:{ticks:{callback:v=>(v*100).toFixed(msFranq==="Daflon"?0:1)+" %"}}}}}); };
+  crearMS();
   renderSanibricks();
 }
 
