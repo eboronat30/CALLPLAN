@@ -1249,6 +1249,7 @@ function renderCalendario(){
       if(usado[i]) continue;
       const m = libres[i];
       if(!pasaFiltroDia(d.fecha,m) || d.medicos.some(x=>x.id===m.id)) continue;
+      if(filtroDia(d.fecha) && aplazamientos.includes(m.id)) continue; // si lo cancelas ese día, no vuelve a salir ese día
       usado[i]=true; d.medicos.push(m);
     }
   };
