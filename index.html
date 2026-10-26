@@ -328,8 +328,9 @@
 
   <div class="view" id="view-ventas">
     <div class="card">
-      <p class="card-title">Septiembre 2026 · Total territorio</p>
-      <p class="card-sub">Unidades del mes, variación frente a agosto y % de cuota.</p>
+      <p class="card-title" id="ventasPanelTitulo">Septiembre 2026 · Total territorio</p>
+      <p class="card-sub">Unidades del mes, variación frente a agosto y % de cuota (la cuota solo está para el total).</p>
+      <div class="dayschk" id="ventasZonaSel" style="margin-bottom:6px;"></div>
       <div id="ventasPanel"></div>
     </div>
     <div class="card">
@@ -1527,6 +1528,10 @@ const VENTAS = {
     ["Atorduo",271,185,1.0037],["Lipocomb",345,252,0.7841],["Daflon 500",2244.6,2515.5,0.8584],
     ["Procoralan + Corlentor",482,333,0.9718]
   ],
+  panelZonas: { // producto, uds sep, uds ago (sin cuota por zona)
+    "Clínic+Plató": [["Viacoram",175,140,null],["Bipreterax",155,88,null],["Viacorlix",83,68,null],["Atorduo",151,93,null],["Lipocomb",282,210,null],["Daflon 500",1917.6,2110,null],["Procoralan + Corlentor",323,209,null]],
+    "Martorell": [["Viacoram",57,39,null],["Bipreterax",115,100,null],["Viacorlix",59,42,null],["Atorduo",120,92,null],["Lipocomb",63,42,null],["Daflon 500",327,405.5,null],["Procoralan + Corlentor",159,124,null]]
+  },
   cuotaMeses: ["mar","abr","may","jun","jul","ago","sep"],
   cuota: {
     "Daflon":    [0.9257,0.9517,0.9233,1.0732,1.0774,0.8550,0.8584],
@@ -1555,7 +1560,7 @@ const VENTAS = {
 };
 const COLORES_FRANQ = {"Daflon":"#3F6659","HTA":"#C08A3E","Lípidos":"#B8574A","Procoralan":"#5E7398"};
 const COLORES_HOSP = {"Clínic":"#3F6659","Plató":"#C08A3E","Martorell":"#B8574A"};
-let ventasCharts = {}; let msFranq = "Daflon";
+let ventasCharts = {}; let msFranq = "Daflon"; let ventasZona = "Total territorio";
 const SANIBRICKS = {"Mercado Daflon": [["Barcelona", "Comte Borrell", 0.5022, 0.5181, "Gana"], ["Barcelona", "Sant Antoni", 0.5494, 0.5545, "Gana"], ["Barcelona", "Via Roma", 0.5106, 0.5302, "Gana"], ["Barcelona", "Universitat", 0.5565, 0.5892, "Gana"], ["Barcelona", "Carles Ribas", 0.2679, 0.268, "Estable"], ["Barcelona", "Bordeta-Magòria", 0.3831, 0.3736, "Pierde"], ["Barcelona", "Sants", 0.468, 0.4594, "Pierde"], ["Barcelona", "Numància", 0.5251, 0.5698, "Gana"], ["Barcelona", "Marina", 0.3973, 0.3786, "Pierde"], ["Barcelona", "Roger", 0.4044, 0.3839, "Pierde"], ["Barcelona", "Poble Sec", 0.4891, 0.5181, "Gana"], ["Barcelona", "Montnegre (4A)", 0.4853, 0.5315, "Gana"], ["Barcelona", "Les Corts", 0.4375, 0.484, "Gana"], ["Barcelona", "Sarrià", 0.513, 0.5323, "Gana"], ["Barcelona", "Marc Aureli", 0.5809, 0.5983, "Gana"], ["Barcelona", "Sant Elies", 0.4965, 0.56, "Gana"], ["Barcelona", "Les Hortes", 0.4723, 0.4622, "Pierde"], ["Barcelona", "Les Planes", 0.628, 0.4897, "Pierde"], ["Barcelona", "Casanova", 0.5592, 0.605, "Gana"], ["Barcelona", "Montnegre (2)", 0.5348, 0.5306, "Estable"], ["Martorell", "Abrera", 0.3577, 0.3968, "Gana"], ["Martorell", "Collbató-Esparreguera", 0.4468, 0.3807, "Pierde"], ["Martorell", "Gelida-Masquefa", 0.2596, 0.2843, "Gana"], ["Martorell", "Martorell", 0.3438, 0.3409, "Estable"], ["Martorell", "Olesa", 0.3577, 0.3968, "Gana"], ["Martorell", "Pallejà", 0.3063, 0.3122, "Gana"], ["Martorell", "Sant Andreu de la Barca", 0.3063, 0.3122, "Gana"]], "Mercado HTA": [["Barcelona", "Comte Borrell", 0.0875, 0.0871, "Estable"], ["Barcelona", "Sant Antoni", 0.0185, 0.0145, "Pierde"], ["Barcelona", "Via Roma", 0.0525, 0.0537, "Gana"], ["Barcelona", "Universitat", 0.044, 0.0515, "Gana"], ["Barcelona", "Carles Ribas", 0.0122, 0.0147, "Gana"], ["Barcelona", "Bordeta-Magòria", 0.0251, 0.0267, "Gana"], ["Barcelona", "Sants", 0.0419, 0.0358, "Pierde"], ["Barcelona", "Numància", 0.0512, 0.0532, "Gana"], ["Barcelona", "Marina", 0.0077, 0.0107, "Gana"], ["Barcelona", "Roger", 0.0081, 0.0102, "Gana"], ["Barcelona", "Poble Sec", 0.0255, 0.0204, "Pierde"], ["Barcelona", "Montnegre (4A)", 0.0604, 0.0675, "Gana"], ["Barcelona", "Les Corts", 0.0262, 0.0296, "Gana"], ["Barcelona", "Sarrià", 0.0404, 0.0485, "Gana"], ["Barcelona", "Marc Aureli", 0.0332, 0.0316, "Pierde"], ["Barcelona", "Sant Elies", 0.0246, 0.0245, "Estable"], ["Barcelona", "Les Hortes", 0.0155, 0.0193, "Gana"], ["Barcelona", "Les Planes", 0.0255, 0.0436, "Gana"], ["Barcelona", "Casanova", 0.0378, 0.0305, "Pierde"], ["Barcelona", "Montnegre (2)", 0.0436, 0.0477, "Gana"], ["Martorell", "Abrera", 0.0186, 0.0241, "Gana"], ["Martorell", "Collbató-Esparreguera", 0.0438, 0.0364, "Pierde"], ["Martorell", "Gelida-Masquefa", 0.022, 0.0189, "Pierde"], ["Martorell", "Martorell", 0.1091, 0.0957, "Pierde"], ["Martorell", "Olesa", 0.0257, 0.0323, "Gana"], ["Martorell", "Pallejà", 0.0299, 0.0219, "Pierde"], ["Martorell", "Sant Andreu de la Barca", 0.0224, 0.0289, "Gana"]], "Mercado Lípidos": [["Barcelona", "Comte Borrell", 0.0926, 0.0915, "Pierde"], ["Barcelona", "Sant Antoni", 0.0652, 0.0543, "Pierde"], ["Barcelona", "Via Roma", 0.0645, 0.0783, "Gana"], ["Barcelona", "Universitat", 0.0815, 0.0839, "Gana"], ["Barcelona", "Carles Ribas", 0.061, 0.0498, "Pierde"], ["Barcelona", "Bordeta-Magòria", 0.0369, 0.0401, "Gana"], ["Barcelona", "Sants", 0.0495, 0.0539, "Gana"], ["Barcelona", "Numància", 0.045, 0.0408, "Pierde"], ["Barcelona", "Marina", 0.0449, 0.0417, "Pierde"], ["Barcelona", "Roger", 0.0243, 0.0252, "Estable"], ["Barcelona", "Poble Sec", 0.0544, 0.0547, "Estable"], ["Barcelona", "Montnegre (4A)", 0.0541, 0.0574, "Gana"], ["Barcelona", "Les Corts", 0.025, 0.026, "Estable"], ["Barcelona", "Sarrià", 0.0646, 0.0721, "Gana"], ["Barcelona", "Marc Aureli", 0.0389, 0.0379, "Pierde"], ["Barcelona", "Sant Elies", 0.0575, 0.0482, "Pierde"], ["Barcelona", "Les Hortes", 0.034, 0.0256, "Pierde"], ["Barcelona", "Les Planes", 0.051, 0.0533, "Gana"], ["Barcelona", "Casanova", 0.0614, 0.0625, "Gana"], ["Barcelona", "Montnegre (2)", 0.0488, 0.0473, "Pierde"], ["Martorell", "Abrera", 0.0945, 0.087, "Pierde"], ["Martorell", "Collbató-Esparreguera", 0.1498, 0.1297, "Pierde"], ["Martorell", "Gelida-Masquefa", 0.0487, 0.0454, "Pierde"], ["Martorell", "Martorell", 0.0371, 0.0314, "Pierde"], ["Martorell", "Olesa", 0.0894, 0.0799, "Pierde"], ["Martorell", "Pallejà", 0.0544, 0.0443, "Pierde"], ["Martorell", "Sant Andreu de la Barca", 0.0679, 0.05, "Pierde"]]}; // [zona, sanibrick, MS oct-25, MS sep-26, tendencia]
 let saniFranq = "Daflon", saniZona = "Barcelona";
 function renderSanibricks(){
@@ -1586,13 +1591,18 @@ const pct = (v,d=1)=> (v*100).toFixed(d).replace(".",",")+" %";
 function renderVentas(){
   if(!document.getElementById("view-ventas").classList.contains("active")) return;
   // Panel del mes (no necesita librería)
-  document.getElementById("ventasPanel").innerHTML = VENTAS.panel.map(([p,u,ua,c])=>{
-    const v=(u-ua)/ua, col=v>=0?"var(--teal)":"var(--rose)", cc=c>=1?"var(--teal)":"var(--rose)";
+  const zsel = document.getElementById("ventasZonaSel");
+  zsel.innerHTML = ["Total territorio","Clínic+Plató","Martorell"].map(z=>`<div class="daychk${z===ventasZona?" on":""}" data-vz="${z}">${z}</div>`).join("");
+  zsel.querySelectorAll("[data-vz]").forEach(el=>el.onclick=()=>{ ventasZona=el.dataset.vz; renderVentas(); });
+  document.getElementById("ventasPanelTitulo").textContent = "Septiembre 2026 · "+ventasZona;
+  const filasPanel = ventasZona==="Total territorio" ? VENTAS.panel : VENTAS.panelZonas[ventasZona];
+  document.getElementById("ventasPanel").innerHTML = filasPanel.map(([p,u,ua,c])=>{
+    const v=(u-ua)/ua, col=v>=0?"var(--teal)":"var(--rose)", cc=(c!==null&&c>=1)?"var(--teal)":(c===null?"var(--dim)":"var(--rose)");
     return `<div class="bar-row" style="display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border);">
       <span style="flex:1;">${escapeHtml(p)}</span>
       <span style="width:62px;text-align:right;font-family:'IBM Plex Mono',monospace;">${Math.round(u).toLocaleString("es-ES")}</span>
       <span style="width:62px;text-align:right;color:${col};font-family:'IBM Plex Mono',monospace;">${v>=0?"+":""}${pct(v,0)}</span>
-      <span style="width:62px;text-align:right;color:${cc};font-family:'IBM Plex Mono',monospace;">${pct(c,0)}</span></div>`;
+      <span style="width:62px;text-align:right;color:${cc};font-family:'IBM Plex Mono',monospace;">${c===null?"—":pct(c,0)}</span></div>`;
   }).join("") + `<div style="display:flex;justify-content:flex-end;gap:8px;font-size:10px;color:var(--dim);padding-top:4px;"><span style="width:62px;text-align:right;">uds</span><span style="width:62px;text-align:right;">vs ago</span><span style="width:62px;text-align:right;">cuota</span></div>`;
 
   const chips = document.getElementById("msFranqSel");
