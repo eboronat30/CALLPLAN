@@ -158,7 +158,7 @@
       <p class="card-title">Tus días de trabajo</p>
       <p class="card-sub">Marca los días de la semana en los que visitas médicos. El calendario reparte las visitas pendientes entre esos días hasta el cierre del ciclo.</p>
       <div class="dayschk" id="diasConfig"></div>
-      <label>Tope de visitas por día</label>
+      <label>Visitas por día</label>
       <input type="number" id="visitasPorDia" min="1" max="30" value="5">
       <label>Planificar visitas desde</label>
       <input type="date" id="inicioPlan">
@@ -380,10 +380,11 @@ const INICIO_PLAN_DEFAULT = "2026-10-27"; // el calendario propone visitas desde
 function inicioPlanISO(){ const h=hoyISO(); const i=config.inicioPlan||INICIO_PLAN_DEFAULT; return i>h?i:h; }
 
 /* ======================= ESTADO Y CLAVES DE STORAGE ======================= */
-const K_DIR="servier-directorio-v2", K_VIS="servier-visitas", K_MAIL="servier-emails", K_ACC="servier-acciones", K_CFG="servier-config-v2", K_APLAZ="servier-aplazamientos";
+const K_DIR="servier-directorio-v2", K_VIS="servier-visitas", K_MAIL="servier-emails", K_ACC="servier-acciones", K_CFG="servier-config-v2", K_APLAZ="servier-aplazamientos", K_PLANES="servier-planes-dia";
 let directorio={centros:[],medicos:[]};
 let visitas=[]; let emails=[]; let acciones=[];
-let aplazamientos=[]; // lista de medicoId cuya próxima visita planificada se ha aplazado a más adelante
+let aplazamientos=[];
+let planesDia={}; // { "AAAA-MM-DD": {ids:[medicoId...], descartados:[medicoId...]} } // lista de medicoId cuya próxima visita planificada se ha aplazado a más adelante
 let config={dias:[false,true,true,true,true,true,false], visitasPorDia:8, importado:false, ciclo:null, cicloFin:null};
 let registroTipo="visita";
 let historialFiltro="todo";
@@ -393,7 +394,8 @@ const DIAS_NOMBRE=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 const DIAS_NOMBRE_LARGO=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
-function hoyISO(){ return fechaToISO(new Date()); }
+let HOY_VIRTUAL = null; // si tiene fecha, la app calcula "como si hoy fuera" ese día (para rehacer el plan de días pasados)
+function hoyISO(){ return HOY_VIRTUAL || fechaToISO(new Date()); }
 function escapeHtml(str){ const d=document.createElement("div"); d.textContent=str||""; return d.innerHTML; }
 function formatFecha(iso){ if(!iso) return "—"; const [y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; }
 function toDate(iso){ const [y,m,d]=iso.split("-").map(Number); return new Date(y, m-1, d); }
@@ -666,6 +668,7 @@ async function cargarTodo(){
   try{ const v = localStorage.getItem(K_MAIL); emails = v?JSON.parse(v):[]; }catch(e){ emails=[]; }
   try{ const v = localStorage.getItem(K_ACC); acciones = v?JSON.parse(v):[]; }catch(e){ acciones=[]; }
   try{ const v = localStorage.getItem(K_APLAZ); aplazamientos = v?JSON.parse(v):[]; }catch(e){ aplazamientos=[]; }
+  try{ const v = localStorage.getItem(K_PLANES); planesDia = v?JSON.parse(v):{}; }catch(e){ planesDia={}; }
   try{ const v = localStorage.getItem(K_CFG); config = v?JSON.parse(v):config; }catch(e){}
 
   // Migración al ciclo nuevo: carga frecuencias/visitas del Excel Vf y reinicia aplazamientos
@@ -835,7 +838,7 @@ document.querySelectorAll(".tab").forEach(tab=>{
 /* ======================= CÁLCULOS DE MÉDICO ======================= */
 function visitasLoggedDe(medicoId){
   // Solo cuentan las visitas posteriores al corte del Excel (las anteriores ya están en "realizadas")
-  return visitas.filter(v=>v.medicoId===medicoId && v.fecha>SEED_CORTE).length;
+  return visitas.filter(v=>v.medicoId===medicoId && v.fecha>SEED_CORTE && (!HOY_VIRTUAL || v.fecha<HOY_VIRTUAL)).length;
 }
 function totalVisitasDe(m){
   return (m.realizadas||0) + visitasLoggedDe(m.id);
@@ -1118,16 +1121,16 @@ function limpiarAplazamientos(){
   });
 }
 
-async function registrarVisitaRapida(medicoId){
+async function registrarVisitaRapida(medicoId, fecha){
   const m = directorio.medicos.find(x=>x.id===medicoId);
   if(!m) return;
   visitas.push({
-    id:uid(), tipo:"visita", medicoId, fecha:hoyISO(),
+    id:uid(), tipo:"visita", medicoId, fecha:fecha||hoyISO(),
     interes:"Medio", productos:[], muestras:false, seguimiento:false,
     notas:"Registrada con doble toque desde Calendario"
   });
   await guardar(K_VIS, visitas);
-  toastMsg(`Visita registrada: ${m.nombre}`);
+  toastMsg(`Visita registrada: ${m.nombre}${fecha&&fecha!==hoyISO()?" ("+formatFecha(fecha)+")":""}`);
   renderTodo();
 }
 
@@ -1145,6 +1148,79 @@ async function desregistrarDesdeCalendario(compuesto){
     toastMsg(e ? `Email de ${nombreMedico(e.medicoId)} eliminado` : "Email eliminado");
   }
   renderTodo();
+}
+
+/* Reparte las visitas pendientes entre los días disponibles (se usa para hoy y para rehacer días pasados) */
+function calcularReparto(slots, diasRestantesCalendario){
+  const totalSlots = slots.length;
+  const cap = config.visitasPorDia;
+  const promedioNecesario = totalSlots / diasRestantesCalendario.length;
+  const necesarioPorDia = Math.ceil(promedioNecesario);
+
+  // Reparto: primero los médicos con día fijo (solo en su día de la semana),
+  // después el resto llenando cada día hasta el ritmo necesario (o el tope).
+  const objetivoDia = cap; // se llena cada día hasta las visitas/día que pongas (si pones más, acabas antes)
+  let planDias = diasRestantesCalendario.map(d=>({fecha:d, medicos:[]}));
+  let sobrantes = [];
+  const libres = [];
+  slots.forEach(m=>{
+    const r = reglaDe(m);
+    if(!r){ libres.push(m); return; }
+    const dia = planDias.find(d=>r.dias.includes(d.fecha.getDay()) && d.medicos.length<cap && !d.medicos.some(x=>x.id===m.id) && pasaFiltroDia(d.fecha,m));
+    if(dia) dia.medicos.push(m); else sobrantes.push(m);
+  });
+  // se recorre la cola en orden; los días con filtro especial solo cogen a quien lo cumple
+  const usado = new Array(libres.length).fill(false);
+  const llenar = (d, tope)=>{
+    // en un día con filtro se recorre agrupando por centro, para no ir saltando de CAP en CAP
+    const orden = libres.map((_,i)=>i);
+    if(filtroDia(d.fecha)) orden.sort((a,b)=>nombreCentro(libres[a].centroId).localeCompare(nombreCentro(libres[b].centroId)) || a-b);
+    for(const i of orden){
+      if(d.medicos.length>=tope) break;
+      if(usado[i]) continue;
+      const m = libres[i];
+      if(!pasaFiltroDia(d.fecha,m) || d.medicos.some(x=>x.id===m.id)) continue;
+      if(filtroDia(d.fecha) && aplazamientos.includes(m.id)) continue; // si lo cancelas ese día, no vuelve a salir ese día
+      usado[i]=true; d.medicos.push(m);
+    }
+  };
+  planDias.forEach(d=>llenar(d, objetivoDia));
+  planDias.forEach(d=>llenar(d, cap));
+  sobrantes = sobrantes.concat(libres.filter((_,i)=>!usado[i]));
+  // dentro de cada día: primero las citas con hora, por orden de hora
+  planDias.forEach(d=>d.medicos.sort((a,b)=>{
+    const ha=(reglaDe(a)||{}).hora||"99", hb=(reglaDe(b)||{}).hora||"99";
+    return ha.localeCompare(hb);
+  }));
+  return {planDias, sobrantes, necesarioPorDia, cap};
+}
+
+/* Plan de un día pasado: el que se guardó ese día o, si no hay, se recalcula como si hoy fuera ese día */
+function planDelDia(iso){
+  const g = planesDia[iso];
+  if(g && g.ids) return g.ids;
+  if(iso < (config.inicioPlan||INICIO_PLAN_DEFAULT)) return [];
+  let ids = [];
+  HOY_VIRTUAL = iso;
+  try{
+    const dias = diasLaborablesHasta(CYCLE_END);
+    if(dias.length && fechaToISO(dias[0])===iso){
+      const r = calcularReparto(construirSlotsPendientes(), dias);
+      ids = r.planDias[0].medicos.map(m=>m.id);
+    }
+  } finally { HOY_VIRTUAL = null; }
+  planesDia[iso] = {ids, descartados:[]};
+  guardar(K_PLANES, planesDia);
+  return ids;
+}
+/* Médicos que estaban planificados ese día y no marcaste (ni visita ni email ese día) */
+function sinMarcarDelDia(iso){
+  const desc = (planesDia[iso] && planesDia[iso].descartados) || [];
+  return planDelDia(iso)
+    .map(id=>directorio.medicos.find(m=>m.id===id)).filter(Boolean)
+    .filter(m=>!desc.includes(m.id))
+    .filter(m=>!visitas.some(v=>v.medicoId===m.id && v.fecha===iso) && !emails.some(e=>e.medicoId===m.id && e.fecha===iso))
+    .filter(m=>{ const p=pendientesDe(m); return p!==null && p>0; });
 }
 
 function renderCalendario(){
@@ -1187,15 +1263,23 @@ function renderCalendario(){
       const fechaStr = `${String(d.fecha.getDate()).padStart(2,"0")}/${String(d.fecha.getMonth()+1).padStart(2,"0")}`;
       const total = d.visitasDia.length + d.emailsDia.length;
       const etiqueta = d.esHoy ? "HOY" : "REALIZADO";
+      const sinMarcar = sinMarcarDelDia(d.fechaISO);
+      const htmlSinMarcar = sinMarcar.length ? `<div class="section-label">Planificadas sin marcar (${sinMarcar.length})</div>`
+        + `<p class="card-sub" style="margin:0 0 4px;">Marca la casilla si la hiciste ese día; ✕ si no la hiciste (seguirá en el plan de los próximos días).</p>`
+        + sinMarcar.map(m=>`<div class="day-doc" style="align-items:center;"><div class="checkbox" data-confirmar-fecha="${m.id}|${d.fechaISO}" style="cursor:pointer; flex-shrink:0; margin-right:2px;" title="Marcar como visitado ese día"><svg viewBox="0 0 12 10" fill="none"><path d="M1 5L4.5 8.5L11 1.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="day-doc-name" style="flex:1;">${escapeHtml(m.nombre)} <span class="center-type">${escapeHtml(m.especialidad||"")}${nombreCentro(m.centroId)?" · "+escapeHtml(nombreCentro(m.centroId)):""}</span></span><button class="del-btn" data-descartar="${m.id}|${d.fechaISO}" title="No la hice: quitar de este día">✕</button></div>`).join("")
+        : "";
       let contenido;
-      if(total===0){
+      if(total===0 && sinMarcar.length){
+        contenido = htmlSinMarcar;
+      } else if(total===0){
         contenido = `<div class="empty-hint" style="padding:4px 0;">Sin visitas ni emails registrados este día.</div>`;
       } else {
         contenido = d.visitasDia.map(v=>`<div class="day-doc"><span class="day-doc-name">${escapeHtml(nombreMedico(v.medicoId))} <span class="center-type">Visita · ${escapeHtml(v.interes||"")}</span></span></div>`).join("")
-          + d.emailsDia.map(e=>`<div class="day-doc"><span class="day-doc-name">${escapeHtml(nombreMedico(e.medicoId))} <span class="center-type">Email</span></span></div>`).join("");
+          + d.emailsDia.map(e=>`<div class="day-doc"><span class="day-doc-name">${escapeHtml(nombreMedico(e.medicoId))} <span class="center-type">Email</span></span></div>`).join("")
+          + htmlSinMarcar;
       }
       return `<div class="day-block">
-        <div class="day-head" style="color:var(--dim);"><span>${nombreDia} ${fechaStr} · <span style="font-size:10px; letter-spacing:.03em;">${etiqueta}</span></span><span>${total}</span></div>
+        <div class="day-head" style="color:var(--dim);"><span>${nombreDia} ${fechaStr} · <span style="font-size:10px; letter-spacing:.03em;">${etiqueta}</span></span><span>${total}${sinMarcar.length?` · ${sinMarcar.length} sin marcar`:""}</span></div>
         ${contenido}
       </div>`;
     }).join("");
@@ -1222,52 +1306,25 @@ function renderCalendario(){
     return;
   }
 
-  const cap = config.visitasPorDia;
-  const promedioNecesario = totalSlots / diasRestantesCalendario.length;
-  const necesarioPorDia = Math.ceil(promedioNecesario);
-
-  // Reparto: primero los médicos con día fijo (solo en su día de la semana),
-  // después el resto llenando cada día hasta el ritmo necesario (o el tope).
-  const objetivoDia = Math.min(cap, necesarioPorDia);
-  let planDias = diasRestantesCalendario.map(d=>({fecha:d, medicos:[]}));
-  let sobrantes = [];
-  const libres = [];
-  slots.forEach(m=>{
-    const r = reglaDe(m);
-    if(!r){ libres.push(m); return; }
-    const dia = planDias.find(d=>r.dias.includes(d.fecha.getDay()) && d.medicos.length<cap && !d.medicos.some(x=>x.id===m.id) && pasaFiltroDia(d.fecha,m));
-    if(dia) dia.medicos.push(m); else sobrantes.push(m);
-  });
-  // se recorre la cola en orden; los días con filtro especial solo cogen a quien lo cumple
-  const usado = new Array(libres.length).fill(false);
-  const llenar = (d, tope)=>{
-    // en un día con filtro se recorre agrupando por centro, para no ir saltando de CAP en CAP
-    const orden = libres.map((_,i)=>i);
-    if(filtroDia(d.fecha)) orden.sort((a,b)=>nombreCentro(libres[a].centroId).localeCompare(nombreCentro(libres[b].centroId)) || a-b);
-    for(const i of orden){
-      if(d.medicos.length>=tope) break;
-      if(usado[i]) continue;
-      const m = libres[i];
-      if(!pasaFiltroDia(d.fecha,m) || d.medicos.some(x=>x.id===m.id)) continue;
-      if(filtroDia(d.fecha) && aplazamientos.includes(m.id)) continue; // si lo cancelas ese día, no vuelve a salir ese día
-      usado[i]=true; d.medicos.push(m);
-    }
-  };
-  planDias.forEach(d=>llenar(d, objetivoDia));
-  planDias.forEach(d=>llenar(d, cap));
-  sobrantes = sobrantes.concat(libres.filter((_,i)=>!usado[i]));
-  // dentro de cada día: primero las citas con hora, por orden de hora
-  planDias.forEach(d=>d.medicos.sort((a,b)=>{
-    const ha=(reglaDe(a)||{}).hora||"99", hb=(reglaDe(b)||{}).hora||"99";
-    return ha.localeCompare(hb);
-  }));
+  const {planDias, sobrantes, necesarioPorDia, cap} = calcularReparto(slots, diasRestantesCalendario);
   if(sobrantes.length===0){
-    warnEl.innerHTML = `<div class="ok-banner">A este ritmo (~${necesarioPorDia} visita${necesarioPorDia>1?"s":""}/día) completas el 100% antes del ${formatFecha(CYCLE_END)}.</div>`;
+    const conVis = planDias.filter(d=>d.medicos.length>0); const ultimoDia = conVis.length ? fechaToISO(conVis[conVis.length-1].fecha) : CYCLE_END;
+    warnEl.innerHTML = `<div class="ok-banner">Con ${cap} visitas/día completas el 100% el ${formatFecha(ultimoDia)} (cierre del ciclo: ${formatFecha(CYCLE_END)}). Mínimo necesario: ${necesarioPorDia}/día.</div>`;
   } else {
     warnEl.innerHTML = `<div class="warn-banner">Con un tope de ${cap} visitas/día no llegas a completar el 100% antes del ${formatFecha(CYCLE_END)}: quedarían ${sobrantes.length} visita(s) sin día asignado. Sube el tope a ${necesarioPorDia}/día, o añade más días de trabajo.</div>`;
   }
 
   ultimoPlanCalendario = planDias;
+  if(planDias.length && fechaToISO(planDias[0].fecha)===hoyISO()){
+    const hoyS = hoyISO();
+    const hechoHoy = visitas.some(v=>v.fecha===hoyS) || emails.some(e=>e.fecha===hoyS);
+    const actual = planesDia[hoyS] || {ids:[], descartados:[]};
+    const idsHoy = planDias[0].medicos.map(m=>m.id);
+    if(!hechoHoy || !actual.ids.length){
+      planesDia[hoyS] = {ids:idsHoy, descartados:actual.descartados||[]};
+      guardar(K_PLANES, planesDia);
+    }
+  }
 
   const aplazarBtn = (m)=>`<button class="del-btn" data-aplazar="${m.id}" title="Aplazar esta visita a más adelante">✕</button>`;
 
@@ -1346,6 +1403,8 @@ function renderCalendario(){
     btn.addEventListener("click", async ()=>{
       aplazamientos.push(btn.dataset.aplazar);
       await guardar(K_APLAZ, aplazamientos);
+      const ph = planesDia[hoyISO()];
+      if(ph && ph.ids){ ph.ids = ph.ids.filter(id=>id!==btn.dataset.aplazar); await guardar(K_PLANES, planesDia); }
       toastMsg("Visita aplazada, se recoloca más adelante");
       renderTodo();
     });
@@ -1731,6 +1790,27 @@ function renderVentas(){
   crearMS();
   renderSanibricks();
 }
+
+document.getElementById("calendarioLista").addEventListener("click", async (ev)=>{
+  const chk = ev.target.closest("[data-confirmar-fecha]");
+  if(chk){
+    if(chk.dataset.procesando) return; chk.dataset.procesando="1";
+    chk.style.background="var(--teal)"; chk.style.borderColor="var(--teal)";
+    const svg=chk.querySelector("svg"); if(svg) svg.style.opacity="1";
+    const [id, fecha] = chk.dataset.confirmarFecha.split("|");
+    await registrarVisitaRapida(id, fecha);
+    return;
+  }
+  const des = ev.target.closest("[data-descartar]");
+  if(des){
+    const [id, fecha] = des.dataset.descartar.split("|");
+    if(!planesDia[fecha]) planesDia[fecha] = {ids:planDelDia(fecha), descartados:[]};
+    planesDia[fecha].descartados = (planesDia[fecha].descartados||[]).concat(id);
+    await guardar(K_PLANES, planesDia);
+    toastMsg("Quitada de ese día; sigue pendiente en el plan");
+    renderTodo();
+  }
+});
 
 function renderTodo(){
   poblarSelectCentros();
