@@ -1823,6 +1823,13 @@ function renderTodo(){
 }
 
 cargarTodo();
+
+// Modo sin conexión: registra el service worker (sw.js)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js');
+  });
+}
 </script>
 </body>
 </html>
